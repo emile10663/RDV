@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'theme/app_theme.dart';
-import 'screens/main_screen.dart';
+import 'screens/accueil_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -18,7 +18,7 @@ class MonCoiffeurApp extends StatelessWidget {
       title: 'Mon Coiffeur',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
-      home: const MainScreen(),
+      home: const AccueilScreen(), // 👈 on choisit d'abord : client ou coiffeur
     );
   }
 }

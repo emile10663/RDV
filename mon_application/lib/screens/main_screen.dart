@@ -23,17 +23,26 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _ecrans[_onglet],   // affiche l'écran choisi
+      body: _ecrans[_onglet],
       bottomNavigationBar: NavigationBar(
         selectedIndex: _onglet,
         onDestinationSelected: (i) => setState(() => _onglet = i),
         destinations: const [
           NavigationDestination(
-              icon: Icon(Icons.calendar_month), label: 'Planning'),
+            icon: Icon(Icons.calendar_month_outlined),
+            selectedIcon: Icon(Icons.calendar_month),
+            label: 'Planning',
+          ),
           NavigationDestination(
-              icon: Icon(Icons.bar_chart), label: 'Stats'),
+            icon: Icon(Icons.bar_chart_outlined),
+            selectedIcon: Icon(Icons.bar_chart),
+            label: 'Stats',
+          ),
           NavigationDestination(
-              icon: Icon(Icons.person), label: 'Profil'),
+            icon: Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person),
+            label: 'Profil',
+          ),
         ],
       ),
     );
