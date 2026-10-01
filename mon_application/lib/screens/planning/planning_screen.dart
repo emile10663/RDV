@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:mon_application/screens/booking/nouveau_rdv_screen.dart';
-
-
 import '../../models/rendez_vous.dart';
-import '../../widgets/card_rdv.dart';
 import '../../services/local_storage.dart';
+import '../../widgets/card_rdv.dart';
+import '../booking/nouveau_rdv_screen.dart';
 
 class PlanningScreen extends StatefulWidget {
   const PlanningScreen({super.key});
@@ -15,36 +13,64 @@ class PlanningScreen extends StatefulWidget {
 }
 
 class _PlanningScreenState extends State<PlanningScreen> {
-  List<RendezVous> _rdvs = []; // 👈 vraies données, plus mockRdvs !
+  List<RendezVous> _rdvs = [];
 
   @override
   void initState() {
     super.initState();
-    _charger(); // au démarrage : lit la sauvegarde
+    _charger();
   }
 
   Future<void> _charger() async {
-    final rdvs = await LocalStorage.charger();
+    final charges = await LocalStorage.charger();
+
+    // 🩹 Répare les anciennes sauvegardes où plusieurs RDV avaient le même id
+    final idsVus = <String>{};
+    var repare = false;
+    final rdvs = <RendezVous>[];
+    for (var i = 0; i < charges.length; i++) {
+      final r = charges[i];
+      if (idsVus.add(r.id)) {
+        rdvs.add(r);
+      } else {
+        repare = true;
+        final nouvelId = '${RendezVous.nouvelId()}_$i';
+        idsVus.add(nouvelId);
+        rdvs.add(r.copyWith(id: nouvelId));
+      }
+    }
+
+    if (!mounted) return;
     setState(() => _rdvs = rdvs);
+    if (repare) await _sauvegarder();
   }
 
   Future<void> _sauvegarder() => LocalStorage.sauvegarder(_rdvs);
+
+  Future<void> _ajouterRdv() async {
+    final rdv = await Navigator.of(context).push<RendezVous>(
+      MaterialPageRoute(
+        builder: (context) => NouveauRdvScreen(rdvsExistants: _rdvs),
+      ),
+    );
+    if (rdv == null || !mounted) return;
+    setState(() => _rdvs.add(rdv));
+    await _sauvegarder();
+  }
+
+  Future<void> _changerStatut(String id, StatutRdv statut) async {
+    final i = _rdvs.indexWhere((r) => r.id == id);
+    if (i == -1) return;
+    setState(() => _rdvs[i] = _rdvs[i].copyWith(statut: statut));
+    await _sauvegarder();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Planning')),
       floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          // Le formulaire RENVOIE le nouveau RDV (pop(rdv) — à modifier à l'étape 5)
-          final rdv = await Navigator.of(context).push<RendezVous>(
-            MaterialPageRoute(builder: (context) => const NouveauRdvScreen()),
-          );
-          if (rdv != null) {
-            setState(() => _rdvs.add(rdv));
-            await _sauvegarder(); // 💾 sauvegarde après chaque ajout
-          }
-        },
+        onPressed: _ajouterRdv,
         child: const Icon(Icons.add),
       ),
       body: ListView(
@@ -54,8 +80,7 @@ class _PlanningScreenState extends State<PlanningScreen> {
     );
   }
 
-    List<Widget> _construireListe() {
-    // 👇 ÉTAT VIDE : aucun RDV
+  List<Widget> _construireListe() {
     if (_rdvs.isEmpty) {
       return const [
         Padding(
@@ -66,7 +91,8 @@ class _PlanningScreenState extends State<PlanningScreen> {
                 Icon(Icons.calendar_today_outlined, size: 64),
                 SizedBox(height: 16),
                 Text('Aucun rendez-vous',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500)),
+                    style:
+                        TextStyle(fontSize: 18, fontWeight: FontWeight.w500)),
                 SizedBox(height: 8),
                 Text('Tape sur + pour créer le premier !'),
               ],
@@ -76,10 +102,6 @@ class _PlanningScreenState extends State<PlanningScreen> {
       ];
     }
 
-    // ... le reste (tri + en-têtes + cartes) inchangé
-
-
-    
     final rdvsTries = [..._rdvs]
       ..sort((a, b) => a.dateHeure.compareTo(b.dateHeure));
     final List<Widget> widgets = [];
@@ -98,29 +120,19 @@ class _PlanningScreenState extends State<PlanningScreen> {
       widgets.add(
         CardRdv(
           rdv: rdv,
-          onAnnule: () async {
-            final i = _rdvs.indexWhere((r) => r.id == rdv.id);
-            setState(
-              () => _rdvs[i] = _rdvs[i].copyWith(statut: StatutRdv.annule),
-            );
-            await _sauvegarder(); // 💾 sauvegarde après annulation
-          },
-          onTermine: () async {
-            final i = _rdvs.indexWhere((r) => r.id == rdv.id);
-            setState(() => _rdvs[i] = _rdvs[i].copyWith(statut: StatutRdv.termine));
-            await _sauvegarder();
-          },
+          onAnnule: () => _changerStatut(rdv.id, StatutRdv.annule),
+          onTermine: () => _changerStatut(rdv.id, StatutRdv.termine),
         ),
       );
     }
     return widgets;
   }
-  // ... _libelleJour et _EnTeteJour inchangés
 
-    /// 🗓️ Libellé du jour : "Aujourd'hui", "Demain", ou "ven. 25 sept. 2026"
+  /// "Aujourd'hui", "Demain", ou "Vendredi 25 sept."
   String _libelleJour(DateTime jour) {
     final maintenant = DateTime.now();
-    final aujourdhui = DateTime(maintenant.year, maintenant.month, maintenant.day);
+    final aujourdhui =
+        DateTime(maintenant.year, maintenant.month, maintenant.day);
     final demain = aujourdhui.add(const Duration(days: 1));
 
     if (jour == aujourdhui) return "Aujourd'hui";
@@ -142,10 +154,11 @@ class _EnTeteJour extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
       child: Text(
         titre,
-        style: Theme.of(context).textTheme.titleMedium!
+        style: Theme.of(context)
+            .textTheme
+            .titleMedium!
             .copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
       ),
     );
   }
 }
-

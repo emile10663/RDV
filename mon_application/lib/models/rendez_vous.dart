@@ -1,3 +1,4 @@
+import 'package:intl/intl.dart';
 import 'client.dart';
 import 'prestation.dart';
 
@@ -17,35 +18,46 @@ class RendezVous {
     required this.client,
     required this.prestation,
     required this.dateHeure,
-    this.statut = StatutRdv.enAttente,  // valeur par défaut
+    this.statut = StatutRdv.enAttente,
   });
 
-  /// Date + heure au format lisible : "16/09/2026 à 14:30"
-  String get dateFormatee {
-    final d = dateHeure;
-    final date = '${d.day.toString().padLeft(2, '0')}/'
-        '${d.month.toString().padLeft(2, '0')}/'
-        '${d.year}';
-    final heure = '${d.hour.toString().padLeft(2, '0')}:'
-        '${d.minute.toString().padLeft(2, '0')}';
-    return '$date à $heure';
+  /// Génère un identifiant unique (remplace 'r${mockRdvs.length + 1}' qui
+  /// donnait toujours le même id)
+  static String nouvelId() =>
+      DateTime.now().microsecondsSinceEpoch.toString();
+
+  /// Heure de fin = début + durée de la prestation
+  DateTime get fin => dateHeure.add(prestation.duree);
+
+  /// Vrai si ce RDV empiète sur le créneau de l'autre
+  bool chevauche(RendezVous autre) =>
+      dateHeure.isBefore(autre.fin) && fin.isAfter(autre.dateHeure);
+
+  /// "14:30"
+  String get heureFormatee => DateFormat('HH:mm').format(dateHeure);
+
+  /// "16/09"
+  String get jourCourt => DateFormat('dd/MM').format(dateHeure);
+
+  /// "16/09/2026 à 14:30"
+  String get dateFormatee =>
+      DateFormat("dd/MM/yyyy 'à' HH:mm").format(dateHeure);
+
+  /// Copie le RDV en changeant le statut et/ou l'id
+  RendezVous copyWith({StatutRdv? statut, String? id}) {
+    return RendezVous(
+      id: id ?? this.id,
+      client: client,
+      prestation: prestation,
+      dateHeure: dateHeure,
+      statut: statut ?? this.statut,
+    );
   }
 
-
-  /// Copie le RDV en modifiant seulement le statut (et plus tard d'autres champs)
-RendezVous copyWith({StatutRdv? statut}) {
-  return RendezVous(
-    id: id,
-    client: client,
-    prestation: prestation,
-    dateHeure: dateHeure,
-    statut: statut ?? this.statut,   // ?? = "si null, garde l'ancienne valeur"
-  );
-}
-
-
   Map<String, dynamic> toJson() => {
-        'id': id, 'client': client.toJson(), 'prestation': prestation.toJson(),
+        'id': id,
+        'client': client.toJson(),
+        'prestation': prestation.toJson(),
         'dateHeure': dateHeure.toIso8601String(),
         'statut': statut.name,
       };

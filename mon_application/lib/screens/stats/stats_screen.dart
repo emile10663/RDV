@@ -22,28 +22,24 @@ class _StatsScreenState extends State<StatsScreen> {
 
   Future<void> _charger() async {
     final rdvs = await LocalStorage.charger();
+    if (!mounted) return;
     setState(() => _rdvs = rdvs);
   }
 
   bool _memeJour(DateTime a, DateTime b) =>
       a.year == b.year && a.month == b.month && a.day == b.day;
 
-  // 💰 CA = somme des prix des RDV NON annulés
-  double get _caTotal => _rdvs
-      .where((r) => r.statut != StatutRdv.annule)
-      .fold(0.0, (somme, r) => somme + r.prestation.prix);
+  /// RDV qui comptent (on ignore les annulés, partout)
+  Iterable<RendezVous> get _actifs =>
+      _rdvs.where((r) => r.statut != StatutRdv.annule);
 
-  double get _caAujourdhui {
+  Iterable<RendezVous> get _actifsAujourdhui {
     final now = DateTime.now();
-    return _rdvs
-        .where((r) => r.statut != StatutRdv.annule && _memeJour(r.dateHeure, now))
-        .fold(0.0, (somme, r) => somme + r.prestation.prix);
+    return _actifs.where((r) => _memeJour(r.dateHeure, now));
   }
 
-  int get _nbAujourdhui {
-    final now = DateTime.now();
-    return _rdvs.where((r) => _memeJour(r.dateHeure, now)).length;
-  }
+  double _somme(Iterable<RendezVous> rdvs) =>
+      rdvs.fold(0.0, (total, r) => total + r.prestation.prix);
 
   String _euros(double montant) =>
       NumberFormat.currency(locale: 'fr_FR', symbol: '€', decimalDigits: 2)
@@ -51,7 +47,6 @@ class _StatsScreenState extends State<StatsScreen> {
 
   @override
   Widget build(BuildContext context) {
-
     return Scaffold(
       appBar: AppBar(title: const Text('Statistiques')),
       body: ListView(
@@ -59,17 +54,17 @@ class _StatsScreenState extends State<StatsScreen> {
         children: [
           _CarteStat(
             titre: "Chiffre d'affaires du jour",
-            valeur: _euros(_caAujourdhui),
+            valeur: _euros(_somme(_actifsAujourdhui)),
             icone: Icons.today,
           ),
           _CarteStat(
-            titre: 'Rendez-vous aujourd\'hui',
-            valeur: '$_nbAujourdhui',
+            titre: "Rendez-vous aujourd'hui",
+            valeur: '${_actifsAujourdhui.length}',
             icone: Icons.event_available,
           ),
           _CarteStat(
             titre: "Chiffre d'affaires total",
-            valeur: _euros(_caTotal),
+            valeur: _euros(_somme(_actifs)),
             icone: Icons.euro,
           ),
         ],
@@ -85,7 +80,9 @@ class _CarteStat extends StatelessWidget {
   final IconData icone;
 
   const _CarteStat({
-    required this.titre, required this.valeur, required this.icone,
+    required this.titre,
+    required this.valeur,
+    required this.icone,
   });
 
   @override

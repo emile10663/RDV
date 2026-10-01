@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/rendez_vous.dart';
 import '../screens/planning/rdv_detail_screen.dart';
+import 'statut_rdv_style.dart';
 
 /// 🗓️ Carte affichant un rendez-vous (réutilisable partout)
 class CardRdv extends StatelessWidget {
@@ -15,64 +16,50 @@ class CardRdv extends StatelessWidget {
     this.onTermine,
   });
 
-  /// Renvoie la couleur du statut (rond + texte)
-  Color _couleurStatut(StatutRdv statut) {
-    switch (statut) {
-      case StatutRdv.confirme:
-        return Colors.green;
-      case StatutRdv.enAttente:
-        return Colors.orange;
-      case StatutRdv.annule:
-        return Colors.red;
-      case StatutRdv.termine:
-        return Colors.grey;
-    }
-  }
+  bool get _modifiable =>
+      rdv.statut != StatutRdv.termine && rdv.statut != StatutRdv.annule;
 
-  /// Renvoie le texte du statut
-  String _texteStatut(StatutRdv statut) {
-    switch (statut) {
-      case StatutRdv.confirme:
-        return 'Confirmé';
-      case StatutRdv.enAttente:
-        return 'En attente';
-      case StatutRdv.annule:
-        return 'Annulé';
-      case StatutRdv.termine:
-        return 'Terminé';
-    }
-  }
-
-  /// Renvoie la couleur de FOND de la carte (très pâle)
-  Color _fondStatut(StatutRdv statut) {
-    switch (statut) {
-      case StatutRdv.confirme:
-        return Colors.green.withValues(alpha: 0.08);
-      case StatutRdv.enAttente:
-        return Colors.orange.withValues(alpha: 0.08);
-      case StatutRdv.annule:
-        return Colors.red.withValues(alpha: 0.08);
-      case StatutRdv.termine:
-        return Colors.grey.withValues(alpha: 0.08);
-    }
+  /// Demande confirmation avant d'annuler
+  Future<void> _confirmerAnnulation(BuildContext context) async {
+    final confirme = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Annuler ce rendez-vous ?'),
+        content: Text('${rdv.client.nomComplet} — ${rdv.dateFormatee}'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Non'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Oui, annuler'),
+          ),
+        ],
+      ),
+    );
+    if (confirme == true) onAnnule?.call();
   }
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
+    final couleur = rdv.statut.couleur;
 
-    return InkWell(
-      onTap: () {
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (context) => RdvDetailScreen(rdv: rdv),
-          ),
-        );
-      },
-      child: Card(
-        color: _fondStatut(rdv.statut),
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+    return Card(
+      color: couleur.withValues(alpha: 0.08),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      // clipBehavior : l'effet au toucher respecte les coins arrondis
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => RdvDetailScreen(rdv: rdv),
+            ),
+          );
+        },
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Row(
@@ -88,14 +75,14 @@ class CardRdv extends StatelessWidget {
                 child: Column(
                   children: [
                     Text(
-                      '${rdv.dateHeure.hour.toString().padLeft(2, '0')}:${rdv.dateHeure.minute.toString().padLeft(2, '0')}',
+                      rdv.heureFormatee,
                       style: textTheme.titleMedium!.copyWith(
                         color: colors.onPrimary,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
                     Text(
-                      '${rdv.dateHeure.day}/${rdv.dateHeure.month}',
+                      rdv.jourCourt,
                       style: textTheme.bodySmall!.copyWith(
                         color: colors.onPrimary.withValues(alpha: 0.8),
                       ),
@@ -114,6 +101,7 @@ class CardRdv extends StatelessWidget {
                     Text(
                       rdv.client.nomComplet,
                       style: textTheme.titleMedium,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -121,6 +109,7 @@ class CardRdv extends StatelessWidget {
                       style: textTheme.bodyMedium!.copyWith(
                         color: colors.onSurfaceVariant,
                       ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
@@ -145,15 +134,15 @@ class CardRdv extends StatelessWidget {
                         width: 10,
                         height: 10,
                         decoration: BoxDecoration(
-                          color: _couleurStatut(rdv.statut),
+                          color: couleur,
                           shape: BoxShape.circle,
                         ),
                       ),
                       const SizedBox(width: 6),
                       Text(
-                        _texteStatut(rdv.statut),
+                        rdv.statut.libelle,
                         style: TextStyle(
-                          color: _couleurStatut(rdv.statut),
+                          color: couleur,
                           fontSize: 13,
                           fontWeight: FontWeight.w500,
                         ),
@@ -163,28 +152,24 @@ class CardRdv extends StatelessWidget {
                 ],
               ),
 
-
-                            
-                           // ─── Menu ⋯ tout à droite ───
-              PopupMenuButton<String>(
-                onSelected: (valeur) {
-                  if (valeur == 'annuler') onAnnule?.call();
-                  if (valeur == 'terminer') onTermine?.call();
-                },
-                itemBuilder: (context) => [
-                  // 👇 ICI : cette ligne conditionnelle
-                  if (rdv.statut != StatutRdv.termine &&
-                      rdv.statut != StatutRdv.annule)
-                    const PopupMenuItem(
+              // ─── Menu ⋯ (seulement si le RDV peut encore changer) ───
+              if (_modifiable)
+                PopupMenuButton<String>(
+                  onSelected: (valeur) {
+                    if (valeur == 'annuler') _confirmerAnnulation(context);
+                    if (valeur == 'terminer') onTermine?.call();
+                  },
+                  itemBuilder: (context) => const [
+                    PopupMenuItem(
                       value: 'terminer',
                       child: Text('Marquer terminé'),
                     ),
-                  const PopupMenuItem(
-                    value: 'annuler',
-                    child: Text('Annuler le RDV'),
-                  ),
-                ],
-              ),
+                    PopupMenuItem(
+                      value: 'annuler',
+                      child: Text('Annuler le RDV'),
+                    ),
+                  ],
+                ),
             ],
           ),
         ),
