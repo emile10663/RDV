@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mon_application/screens/client/client_home_screen.dart';
-import 'package:mon_application/screens/main_screen.dart';
+import 'package:mon_application/screens/coiffeur/porte_coiffeur.dart';
 import 'package:mon_application/theme/app_colors.dart';
 
 /// 👋 Premier écran : "Je suis client" ou "Je suis coiffeur"
@@ -73,7 +73,8 @@ class AccueilScreen extends StatelessWidget {
                     sousTitre: 'Gérer mon planning',
                     clair: false,
                     onTap: () => Navigator.of(context).pushReplacement(
-                      MaterialPageRoute(builder: (_) => const MainScreen()),
+                      MaterialPageRoute(
+                          builder: (_) => const PorteCoiffeur()),
                     ),
                   ),
                 ],

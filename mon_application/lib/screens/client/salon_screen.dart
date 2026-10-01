@@ -1,48 +1,119 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../../data/horaires.dart';
-import '../../data/mock_rdvs.dart';
 import '../../models/prestation.dart';
 import '../../models/rendez_vous.dart';
-import '../../services/local_storage.dart';
+import '../../models/salon.dart';
+import '../../services/auth_service.dart';
+import '../../services/prestation_service.dart';
+import '../../services/rdv_service.dart';
 import '../../theme/app_colors.dart';
 import '../accueil_screen.dart';
 import '../booking/nouveau_rdv_screen.dart';
 
 /// 💈 Page du salon vue par le client : présentation + prestations
 class SalonScreen extends StatefulWidget {
-  const SalonScreen({super.key});
+  final Salon salon;
+  final VoidCallback onChangerSalon;
+
+  const SalonScreen({
+    super.key,
+    required this.salon,
+    required this.onChangerSalon,
+  });
 
   @override
   State<SalonScreen> createState() => _SalonScreenState();
 }
 
 class _SalonScreenState extends State<SalonScreen> {
+  List<Prestation> _prestations = [];
+  bool _chargement = true;
+  String? _erreur;
+
+  @override
+  void initState() {
+    super.initState();
+    _charger();
+  }
+
+  void _message(String texte) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(texte)));
+  }
+
+  String _texteErreur(Object e, String parDefaut) =>
+      e is FirebaseAuthException ? AuthService.messageErreur(e) : parDefaut;
+
+  Future<void> _charger() async {
+    setState(() {
+      _chargement = true;
+      _erreur = null;
+    });
+    try {
+      final liste = await PrestationService.charger(widget.salon.id);
+      if (!mounted) return;
+      setState(() {
+        _prestations = liste;
+        _chargement = false;
+      });
+    } catch (e) {
+      debugPrint('Erreur chargement prestations : $e');
+      if (!mounted) return;
+      setState(() {
+        _erreur = 'Impossible de charger les prestations.';
+        _chargement = false;
+      });
+    }
+  }
+
   Future<void> _reserver() async {
-    final existants = await LocalStorage.charger();
+    if (_prestations.isEmpty) {
+      _message('Ce salon n\'a pas encore de prestations.');
+      return;
+    }
+
+    // 1. Session du client + créneaux déjà pris (sans aucun nom)
+    final String uid;
+    final List<RendezVous> occupes;
+    try {
+      uid = await AuthService.assurerSessionClient();
+      occupes = await RdvService.creneauxOccupes(widget.salon.id);
+    } catch (e) {
+      debugPrint('Erreur préparation réservation : $e');
+      if (mounted) {
+        _message(_texteErreur(e, 'Impossible de joindre le salon. Réessaie.'));
+      }
+      return;
+    }
     if (!mounted) return;
 
+    // 2. Formulaire de réservation
     final rdv = await Navigator.of(context).push<RendezVous>(
       MaterialPageRoute(
         builder: (context) => NouveauRdvScreen(
-          rdvsExistants: existants,
+          prestations: _prestations,
+          rdvsExistants: occupes,
           modeClient: true,
         ),
       ),
     );
     if (rdv == null || !mounted) return;
 
-    // On relit la liste au cas où elle a changé, puis on ajoute la demande
-    final tous = await LocalStorage.charger();
-    tous.add(rdv);
-    await LocalStorage.sauvegarder(tous);
-    await LocalStorage.ajouterMonRdv(rdv.id);
-
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Demande envoyée ! Le salon va la confirmer.'),
-      ),
-    );
+    // 3. Envoi de la demande au salon
+    try {
+      await RdvService.creer(
+        rdv.copyWith(salonId: widget.salon.id),
+        clientUid: uid,
+      );
+      if (!mounted) return;
+      _message('Demande envoyée ! Le salon va la confirmer.');
+    } catch (e) {
+      debugPrint('Erreur envoi demande : $e');
+      if (mounted) {
+        _message(_texteErreur(e, 'Impossible d\'envoyer la demande. Réessaie.'));
+      }
+    }
   }
 
   String _h(int heure) => '${heure.toString().padLeft(2, '0')}:00';
@@ -50,6 +121,7 @@ class _SalonScreenState extends State<SalonScreen> {
   @override
   Widget build(BuildContext context) {
     final haut = MediaQuery.of(context).padding.top;
+    final salon = widget.salon;
 
     return Scaffold(
       floatingActionButton: FloatingActionButton.extended(
@@ -85,6 +157,12 @@ class _SalonScreenState extends State<SalonScreen> {
                       ),
                     ),
                     IconButton(
+                      tooltip: 'Changer de salon',
+                      icon: const Icon(Icons.storefront_outlined,
+                          color: Colors.white),
+                      onPressed: widget.onChangerSalon,
+                    ),
+                    IconButton(
                       tooltip: 'Changer de mode',
                       icon: const Icon(Icons.swap_horiz, color: Colors.white),
                       onPressed: () =>
@@ -98,40 +176,32 @@ class _SalonScreenState extends State<SalonScreen> {
                   ],
                 ),
                 Text(
-                  'Mon Salon',
+                  salon.nom,
                   style: Theme.of(context)
                       .textTheme
                       .headlineLarge!
                       .copyWith(color: Colors.white),
                 ),
                 const SizedBox(height: 4),
-                const Text(
-                  'Coiffeur & Barbier',
-                  style: TextStyle(color: AppColors.gold, fontSize: 15),
+                Text(
+                  salon.adresse,
+                  style: const TextStyle(color: AppColors.gold, fontSize: 15),
                 ),
                 const SizedBox(height: 16),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.10),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.schedule,
-                          size: 16, color: AppColors.gold),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Ouvert de ${_h(heureOuverture)} à ${_h(heureFermeture)}',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ],
-                  ),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 8,
+                  children: [
+                    _PastilleEntete(
+                      icone: Icons.schedule,
+                      texte:
+                          'Ouvert de ${_h(heureOuverture)} à ${_h(heureFermeture)}',
+                    ),
+                    _PastilleEntete(
+                      icone: Icons.phone_outlined,
+                      texte: salon.telephone,
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -145,8 +215,61 @@ class _SalonScreenState extends State<SalonScreen> {
               style: Theme.of(context).textTheme.titleLarge,
             ),
           ),
-          for (final p in mockPrestations)
-            _CartePrestation(prestation: p, onTap: _reserver),
+          if (_chargement)
+            const Padding(
+              padding: EdgeInsets.all(24),
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else if (_erreur != null)
+            Column(
+              children: [
+                Text(_erreur!),
+                TextButton(
+                  onPressed: _charger,
+                  child: const Text('Réessayer'),
+                ),
+              ],
+            )
+          else if (_prestations.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                'Ce salon n\'a pas encore ajouté de prestations.',
+                style: TextStyle(color: AppColors.onSurfaceVariant),
+              ),
+            )
+          else
+            for (final p in _prestations)
+              _CartePrestation(prestation: p, onTap: _reserver),
+        ],
+      ),
+    );
+  }
+}
+
+class _PastilleEntete extends StatelessWidget {
+  final IconData icone;
+  final String texte;
+
+  const _PastilleEntete({required this.icone, required this.texte});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icone, size: 16, color: AppColors.gold),
+          const SizedBox(width: 6),
+          Text(
+            texte,
+            style: const TextStyle(color: Colors.white, fontSize: 13),
+          ),
         ],
       ),
     );

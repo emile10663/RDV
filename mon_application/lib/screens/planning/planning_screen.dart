@@ -1,7 +1,13 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../../models/prestation.dart';
 import '../../models/rendez_vous.dart';
-import '../../services/local_storage.dart';
+import '../../models/salon.dart';
+import '../../services/auth_service.dart';
+import '../../services/prestation_service.dart';
+import '../../services/rdv_service.dart';
+import '../../services/salon_service.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/card_rdv.dart';
 import '../../widgets/puce_jour.dart';
@@ -20,6 +26,9 @@ class _PlanningScreenState extends State<PlanningScreen> {
   static const _pas = PuceJour.largeur + PuceJour.espace;
 
   List<RendezVous> _rdvs = [];
+  Salon? _salon;
+  String? _erreur;
+  StreamSubscription<List<RendezVous>>? _abonnement;
   late DateTime _jourChoisi;
   late final ScrollController _bandeau;
 
@@ -31,64 +40,133 @@ class _PlanningScreenState extends State<PlanningScreen> {
     _jourChoisi = _jour(DateTime.now());
     // Au départ, "aujourd'hui" est le premier jour visible dans la bande
     _bandeau = ScrollController(initialScrollOffset: _joursAvant * _pas);
-    _charger();
+    _demarrer();
   }
 
   @override
   void dispose() {
+    _abonnement?.cancel();
     _bandeau.dispose();
     super.dispose();
   }
 
-  Future<void> _charger() async {
-    final charges = await LocalStorage.charger();
-
-    // 🩹 Répare les anciennes sauvegardes où plusieurs RDV avaient le même id
-    final idsVus = <String>{};
-    var repare = false;
-    final rdvs = <RendezVous>[];
-    for (var i = 0; i < charges.length; i++) {
-      final r = charges[i];
-      if (idsVus.add(r.id)) {
-        rdvs.add(r);
-      } else {
-        repare = true;
-        final nouvelId = '${RendezVous.nouvelId()}_$i';
-        idsVus.add(nouvelId);
-        rdvs.add(r.copyWith(id: nouvelId));
-      }
-    }
-
-    if (!mounted) return;
-    setState(() => _rdvs = rdvs);
-    if (repare) await _sauvegarder();
+  void _message(String texte) {
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(texte)));
   }
 
-  Future<void> _sauvegarder() => LocalStorage.sauvegarder(_rdvs);
+  /// Charge le salon puis écoute ses rendez-vous en direct
+  Future<void> _demarrer() async {
+    await _abonnement?.cancel();
+    _abonnement = null;
+    if (mounted) {
+      setState(() {
+        _erreur = null;
+      });
+    }
+
+    try {
+      final salon = await SalonService.salonDuCoiffeur();
+      if (!mounted) return;
+      if (salon == null) {
+        setState(() {
+          _erreur = 'Salon introuvable.';
+        });
+        return;
+      }
+      setState(() {
+        _salon = salon;
+      });
+
+      _abonnement = RdvService.ecouterSalon(salon.id).listen(
+        (liste) {
+          if (!mounted) return;
+          setState(() {
+            _rdvs = liste;
+            _erreur = null;
+          });
+        },
+        onError: (Object e) {
+          debugPrint('Erreur écoute rendez-vous : $e');
+          if (!mounted) return;
+          setState(() {
+            _erreur = 'Impossible de charger les rendez-vous.';
+          });
+        },
+      );
+    } catch (e) {
+      debugPrint('Erreur chargement planning : $e');
+      if (!mounted) return;
+      setState(() {
+        _erreur = 'Impossible de charger le planning.';
+      });
+    }
+  }
 
   Future<void> _ajouterRdv() async {
+    final salon = _salon;
+    if (salon == null) {
+      _message('Salon introuvable.');
+      return;
+    }
+
+    // On relit les prestations à chaque fois, pour être à jour
+    final List<Prestation> prestations;
+    try {
+      prestations = await PrestationService.charger(salon.id);
+    } catch (e) {
+      debugPrint('Erreur chargement prestations : $e');
+      if (mounted) _message('Impossible de charger les prestations.');
+      return;
+    }
+    if (!mounted) return;
+
+    if (prestations.isEmpty) {
+      _message('Ajoute d\'abord une prestation dans l\'onglet Profil.');
+      return;
+    }
+
     final rdv = await Navigator.of(context).push<RendezVous>(
       MaterialPageRoute(
         builder: (context) => NouveauRdvScreen(
+          prestations: prestations,
           rdvsExistants: _rdvs,
           jourInitial: _jourChoisi,
         ),
       ),
     );
     if (rdv == null || !mounted) return;
-    setState(() {
+
+    final uid = AuthService.utilisateur?.uid;
+    if (uid == null) {
+      _message('Session expirée. Reconnecte-toi.');
+      return;
+    }
+
+    try {
       // Un RDV saisi par le coiffeur est directement confirmé
-      _rdvs.add(rdv.copyWith(statut: StatutRdv.confirme));
-      _jourChoisi = _jour(rdv.dateHeure);
-    });
-    await _sauvegarder();
+      await RdvService.creer(
+        rdv.copyWith(statut: StatutRdv.confirme, salonId: salon.id),
+        clientUid: uid,
+      );
+      if (!mounted) return;
+      setState(() {
+        _jourChoisi = _jour(rdv.dateHeure);
+      });
+    } catch (e) {
+      debugPrint('Erreur création rendez-vous : $e');
+      if (mounted) _message('Impossible d\'enregistrer le rendez-vous.');
+    }
   }
 
-  Future<void> _changerStatut(String id, StatutRdv statut) async {
-    final i = _rdvs.indexWhere((r) => r.id == id);
-    if (i == -1) return;
-    setState(() => _rdvs[i] = _rdvs[i].copyWith(statut: statut));
-    await _sauvegarder();
+  Future<void> _changerStatut(RendezVous rdv, StatutRdv statut) async {
+    try {
+      await RdvService.changerStatut(rdv, statut);
+      // Pas de setState : l'écoute en direct met la liste à jour
+    } catch (e) {
+      debugPrint('Erreur changement de statut : $e');
+      if (mounted) _message('Impossible de modifier le rendez-vous.');
+    }
   }
 
   @override
@@ -112,7 +190,12 @@ class _PlanningScreenState extends State<PlanningScreen> {
       ),
       body: Column(
         children: [
-          _Entete(jour: _jourChoisi, nbRdv: actifs.length, ca: ca),
+          _Entete(
+            nomSalon: _salon?.nom ?? 'Mon salon',
+            jour: _jourChoisi,
+            nbRdv: actifs.length,
+            ca: ca,
+          ),
 
           // ─── Bande des jours ───
           SizedBox(
@@ -140,23 +223,36 @@ class _PlanningScreenState extends State<PlanningScreen> {
 
           // ─── Liste du jour ───
           Expanded(
-            child: duJour.isEmpty
-                ? _JourneeLibre(onAjouter: _ajouterRdv)
-                : ListView(
-                    padding: const EdgeInsets.only(top: 12, bottom: 110),
-                    children: [
-                      for (final rdv in duJour)
-                        CardRdv(
-                          rdv: rdv,
-                          onConfirme: () =>
-                              _changerStatut(rdv.id, StatutRdv.confirme),
-                          onAnnule: () =>
-                              _changerStatut(rdv.id, StatutRdv.annule),
-                          onTermine: () =>
-                              _changerStatut(rdv.id, StatutRdv.termine),
+            child: _erreur != null && _rdvs.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(_erreur!),
+                        TextButton(
+                          onPressed: _demarrer,
+                          child: const Text('Réessayer'),
                         ),
-                    ],
-                  ),
+                      ],
+                    ),
+                  )
+                : duJour.isEmpty
+                    ? _JourneeLibre(onAjouter: _ajouterRdv)
+                    : ListView(
+                        padding: const EdgeInsets.only(top: 12, bottom: 110),
+                        children: [
+                          for (final rdv in duJour)
+                            CardRdv(
+                              rdv: rdv,
+                              onConfirme: () =>
+                                  _changerStatut(rdv, StatutRdv.confirme),
+                              onAnnule: () =>
+                                  _changerStatut(rdv, StatutRdv.annule),
+                              onTermine: () =>
+                                  _changerStatut(rdv, StatutRdv.termine),
+                            ),
+                        ],
+                      ),
           ),
         ],
       ),
@@ -164,13 +260,19 @@ class _PlanningScreenState extends State<PlanningScreen> {
   }
 }
 
-/// 🖤 En-tête sombre : date du jour + résumé
+/// 🖤 En-tête sombre : nom du salon, date du jour + résumé
 class _Entete extends StatelessWidget {
+  final String nomSalon;
   final DateTime jour;
   final int nbRdv;
   final double ca;
 
-  const _Entete({required this.jour, required this.nbRdv, required this.ca});
+  const _Entete({
+    required this.nomSalon,
+    required this.jour,
+    required this.nbRdv,
+    required this.ca,
+  });
 
   String get _titre {
     final t = DateFormat('EEEE d MMMM', 'fr_FR').format(jour);
@@ -194,9 +296,11 @@ class _Entete extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'MON SALON',
-            style: TextStyle(
+          Text(
+            nomSalon.toUpperCase(),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
               color: AppColors.gold,
               fontSize: 12,
               letterSpacing: 2.4,

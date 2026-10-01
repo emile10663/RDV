@@ -2,7 +2,6 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../data/horaires.dart';
-import '../../data/mock_rdvs.dart';
 import '../../models/client.dart';
 import '../../models/prestation.dart';
 import '../../models/rendez_vous.dart';
@@ -11,6 +10,9 @@ import '../../widgets/puce_jour.dart';
 
 /// ➕ Écran de création d'un rendez-vous
 class NouveauRdvScreen extends StatefulWidget {
+  /// Prestations proposées par le salon
+  final List<Prestation> prestations;
+
   /// RDV déjà pris : sert à griser les créneaux occupés
   final List<RendezVous> rdvsExistants;
 
@@ -22,6 +24,7 @@ class NouveauRdvScreen extends StatefulWidget {
 
   const NouveauRdvScreen({
     super.key,
+    required this.prestations,
     this.rdvsExistants = const [],
     this.jourInitial,
     this.modeClient = false,
@@ -200,7 +203,7 @@ class _NouveauRdvScreenState extends State<NouveauRdvScreen> {
 
             // ─── 2. Prestation ───
             const _Titre('Prestation', numero: 2),
-            for (final p in mockPrestations)
+            for (final p in widget.prestations)
               _TuilePrestation(
                 prestation: p,
                 selected: prestation?.id == p.id,

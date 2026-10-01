@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../models/rendez_vous.dart';
-import '../../services/local_storage.dart';
+import '../../services/auth_service.dart';
+import '../../services/rdv_service.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/statut_rdv_style.dart';
 
-/// 📋 Les rendez-vous pris par le client (sur cet appareil)
+/// 📋 Les rendez-vous pris par le client (avec sa session actuelle)
 class MesRdvScreen extends StatefulWidget {
   const MesRdvScreen({super.key});
 
@@ -16,6 +17,7 @@ class MesRdvScreen extends StatefulWidget {
 class _MesRdvScreenState extends State<MesRdvScreen> {
   List<RendezVous> _mes = [];
   bool _charge = false;
+  String? _erreur;
 
   @override
   void initState() {
@@ -24,14 +26,34 @@ class _MesRdvScreenState extends State<MesRdvScreen> {
   }
 
   Future<void> _charger() async {
-    final tous = await LocalStorage.charger();
-    final ids = await LocalStorage.chargerMesIds();
-    final mes = tous.where((r) => ids.contains(r.id)).toList();
-    if (!mounted) return;
-    setState(() {
-      _mes = mes;
-      _charge = true;
-    });
+    final uid = AuthService.utilisateur?.uid;
+    if (uid == null) {
+      // Pas encore de session : le client n'a encore rien réservé
+      if (!mounted) return;
+      setState(() {
+        _mes = [];
+        _erreur = null;
+        _charge = true;
+      });
+      return;
+    }
+
+    try {
+      final mes = await RdvService.mesRdvs(uid);
+      if (!mounted) return;
+      setState(() {
+        _mes = mes;
+        _erreur = null;
+        _charge = true;
+      });
+    } catch (e) {
+      debugPrint('Erreur chargement Mes RDV : $e');
+      if (!mounted) return;
+      setState(() {
+        _erreur = 'Impossible de charger tes rendez-vous.';
+        _charge = true;
+      });
+    }
   }
 
   Future<void> _annuler(RendezVous rdv) async {
@@ -57,12 +79,16 @@ class _MesRdvScreenState extends State<MesRdvScreen> {
     );
     if (confirme != true) return;
 
-    final tous = await LocalStorage.charger();
-    final i = tous.indexWhere((r) => r.id == rdv.id);
-    if (i == -1) return;
-    tous[i] = tous[i].copyWith(statut: StatutRdv.annule);
-    await LocalStorage.sauvegarder(tous);
-    await _charger();
+    try {
+      await RdvService.changerStatut(rdv, StatutRdv.annule);
+      await _charger();
+    } catch (e) {
+      debugPrint('Erreur annulation : $e');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Impossible d\'annuler. Réessaie.')),
+      );
+    }
   }
 
   @override
@@ -87,7 +113,22 @@ class _MesRdvScreenState extends State<MesRdvScreen> {
           Text('Mes rendez-vous',
               style: Theme.of(context).textTheme.headlineMedium),
           const SizedBox(height: 20),
-          if (_charge && _mes.isEmpty) const _Vide(),
+          if (!_charge)
+            const Padding(
+              padding: EdgeInsets.only(top: 60),
+              child: Center(child: CircularProgressIndicator()),
+            ),
+          if (_erreur != null)
+            Column(
+              children: [
+                Text(_erreur!),
+                TextButton(
+                  onPressed: _charger,
+                  child: const Text('Réessayer'),
+                ),
+              ],
+            ),
+          if (_charge && _erreur == null && _mes.isEmpty) const _Vide(),
           if (aVenir.isNotEmpty) ...[
             Text('À venir', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 12),

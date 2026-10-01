@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
-import 'salon_screen.dart';
+import '../../models/salon.dart';
+import 'choix_salon_screen.dart';
 import 'mes_rdv_screen.dart';
+import 'salon_screen.dart';
 
-/// 🧭 Espace client : "Le salon" + "Mes RDV"
+/// 🧭 Espace client : choix du salon, puis "Le salon" + "Mes RDV"
 class ClientHomeScreen extends StatefulWidget {
   const ClientHomeScreen({super.key});
 
@@ -12,16 +14,34 @@ class ClientHomeScreen extends StatefulWidget {
 
 class _ClientHomeScreenState extends State<ClientHomeScreen> {
   int _onglet = 0;
-
-  final _ecrans = const [
-    SalonScreen(),
-    MesRdvScreen(),
-  ];
+  Salon? _salon;
 
   @override
   Widget build(BuildContext context) {
+    final salon = _salon;
+
+    if (salon == null) {
+      return ChoixSalonScreen(
+        onChoisi: (s) => setState(() {
+          _salon = s;
+          _onglet = 0;
+        }),
+      );
+    }
+
+    final ecrans = [
+      SalonScreen(
+        key: ValueKey(salon.id),
+        salon: salon,
+        onChangerSalon: () => setState(() {
+          _salon = null;
+        }),
+      ),
+      const MesRdvScreen(),
+    ];
+
     return Scaffold(
-      body: _ecrans[_onglet],
+      body: ecrans[_onglet],
       bottomNavigationBar: NavigationBar(
         selectedIndex: _onglet,
         onDestinationSelected: (i) => setState(() => _onglet = i),
