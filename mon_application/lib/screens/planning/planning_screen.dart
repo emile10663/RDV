@@ -153,6 +153,8 @@ class _PlanningScreenState extends State<PlanningScreen> {
       setState(() {
         _jourChoisi = _jour(rdv.dateHeure);
       });
+    } on CreneauPrisException catch (e) {
+      if (mounted) _message(e.message);
     } catch (e) {
       debugPrint('Erreur création rendez-vous : $e');
       if (mounted) _message('Impossible d\'enregistrer le rendez-vous.');

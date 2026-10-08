@@ -5,11 +5,38 @@ import '../models/prestation.dart';
 import '../models/rendez_vous.dart';
 import 'base_donnees.dart';
 
+/// Levée quand le créneau demandé vient d'être pris par quelqu'un d'autre
+class CreneauPrisException implements Exception {
+  final String message;
+  const CreneauPrisException([
+    this.message = "Ce créneau vient d'être pris. Choisis un autre horaire.",
+  ]);
+
+  @override
+  String toString() => message;
+}
+
 /// 📅 Les rendez-vous dans Firestore
-///   rdvs/{id}                        → le RDV complet (nom, téléphone…)
-///   salons/{salonId}/creneaux/{id}   → seulement début et fin (lisible par tous)
+///   rdvs/{id}                          → le RDV complet (nom, téléphone…)
+///   salons/{salonId}/creneaux/{bloc}   → un document par bloc de 30 min occupé
+///                                        (lisible par tous, sans aucun nom).
+///   L'identifiant du bloc = son heure de début : si deux personnes réservent
+///   en même temps, la deuxième est refusée par Firestore.
 class RdvService {
   static const _delai = Duration(seconds: 15);
+  static const _bloc = Duration(minutes: 30);
+
+  /// Heures de début des blocs de 30 min occupés par ce RDV
+  static List<DateTime> _blocs(RendezVous rdv) {
+    final d = rdv.dateHeure;
+    final debut = DateTime(d.year, d.month, d.day, d.hour, d.minute - d.minute % 30);
+    final minutes = rdv.prestation.duree.inMinutes;
+    final nombre = minutes <= 0 ? 1 : (minutes + 29) ~/ 30;
+    return [for (var i = 0; i < nombre; i++) debut.add(_bloc * i)];
+  }
+
+  static String _idBloc(DateTime debut) =>
+      debut.millisecondsSinceEpoch.toString();
 
   static CollectionReference<Map<String, dynamic>> get _rdvs =>
       BaseDonnees.db.collection('rdvs');
@@ -89,7 +116,8 @@ class RdvService {
     }).toList();
   }
 
-  /// Enregistre le RDV ET son créneau en une seule opération
+  /// Enregistre le RDV ET ses blocs de créneau en une seule opération.
+  /// Si un bloc est déjà pris, rien n'est enregistré.
   static Future<void> creer(RendezVous rdv, {required String clientUid}) async {
     assert(rdv.salonId.isNotEmpty, 'Le RDV doit avoir un salonId');
 
@@ -99,19 +127,31 @@ class RdvService {
       'clientUid': clientUid,
       'creeLe': FieldValue.serverTimestamp(),
     });
-    batch.set(_creneaux(rdv.salonId).doc(rdv.id), {
-      'debut': Timestamp.fromDate(rdv.dateHeure),
-      'fin': Timestamp.fromDate(rdv.fin),
-    });
-    await batch.commit().timeout(_delai);
+    for (final debut in _blocs(rdv)) {
+      batch.set(_creneaux(rdv.salonId).doc(_idBloc(debut)), {
+        'debut': Timestamp.fromDate(debut),
+        'fin': Timestamp.fromDate(debut.add(_bloc)),
+        'rdvId': rdv.id,
+      });
+    }
+
+    try {
+      await batch.commit().timeout(_delai);
+    } on FirebaseException catch (e) {
+      // Bloc déjà existant = créneau pris (refusé par les règles Firestore)
+      if (e.code == 'permission-denied') throw const CreneauPrisException();
+      rethrow;
+    }
   }
 
-  /// Change le statut. Si le RDV est annulé, le créneau est libéré.
+  /// Change le statut. Si le RDV est annulé, ses blocs sont libérés.
   static Future<void> changerStatut(RendezVous rdv, StatutRdv statut) async {
     final batch = BaseDonnees.db.batch();
     batch.update(_rdvs.doc(rdv.id), {'statut': statut.name});
     if (statut == StatutRdv.annule) {
-      batch.delete(_creneaux(rdv.salonId).doc(rdv.id));
+      for (final debut in _blocs(rdv)) {
+        batch.delete(_creneaux(rdv.salonId).doc(_idBloc(debut)));
+      }
     }
     await batch.commit().timeout(_delai);
   }

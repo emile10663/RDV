@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../models/rendez_vous.dart';
-import '../../services/local_storage.dart';
+import '../../services/rdv_service.dart';
+import '../../services/salon_service.dart';
 import '../../theme/app_colors.dart';
 
 /// 📊 Statistiques du salon
@@ -14,6 +16,9 @@ class StatsScreen extends StatefulWidget {
 
 class _StatsScreenState extends State<StatsScreen> {
   List<RendezVous> _rdvs = [];
+  bool _chargement = true;
+  String? _erreur;
+  StreamSubscription<List<RendezVous>>? _abonnement;
 
   @override
   void initState() {
@@ -21,10 +26,60 @@ class _StatsScreenState extends State<StatsScreen> {
     _charger();
   }
 
+  @override
+  void dispose() {
+    _abonnement?.cancel();
+    super.dispose();
+  }
+
+  /// Lit les vrais rendez-vous du salon dans Firestore (mis à jour en direct)
   Future<void> _charger() async {
-    final rdvs = await LocalStorage.charger();
-    if (!mounted) return;
-    setState(() => _rdvs = rdvs);
+    await _abonnement?.cancel();
+    _abonnement = null;
+    if (mounted) {
+      setState(() {
+        _chargement = true;
+        _erreur = null;
+      });
+    }
+
+    try {
+      final salon = await SalonService.salonDuCoiffeur();
+      if (!mounted) return;
+      if (salon == null) {
+        setState(() {
+          _chargement = false;
+          _erreur = 'Salon introuvable.';
+        });
+        return;
+      }
+
+      _abonnement = RdvService.ecouterSalon(salon.id).listen(
+        (liste) {
+          if (!mounted) return;
+          setState(() {
+            _rdvs = liste;
+            _chargement = false;
+            _erreur = null;
+          });
+        },
+        onError: (Object e) {
+          debugPrint('Erreur écoute statistiques : $e');
+          if (!mounted) return;
+          setState(() {
+            _chargement = false;
+            _erreur = 'Impossible de charger les statistiques.';
+          });
+        },
+      );
+    } catch (e) {
+      debugPrint('Erreur chargement statistiques : $e');
+      if (!mounted) return;
+      setState(() {
+        _chargement = false;
+        _erreur = 'Impossible de charger les statistiques.';
+      });
+    }
   }
 
   bool _memeJour(DateTime a, DateTime b) =>
@@ -48,6 +103,31 @@ class _StatsScreenState extends State<StatsScreen> {
   @override
   Widget build(BuildContext context) {
     final haut = MediaQuery.of(context).padding.top;
+
+    if (_chargement) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+    if (_erreur != null) {
+      return Scaffold(
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(_erreur!, textAlign: TextAlign.center),
+                const SizedBox(height: 16),
+                OutlinedButton(
+                  onPressed: _charger,
+                  child: const Text('Réessayer'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     final aujourdhui = DateTime.now();
     final nbAujourdhui = _actifsAujourdhui.length;
 

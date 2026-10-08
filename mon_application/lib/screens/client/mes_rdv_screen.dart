@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../models/rendez_vous.dart';
 import '../../services/auth_service.dart';
+import '../../services/avis_service.dart';
 import '../../services/rdv_service.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/statut_rdv_style.dart';
+import '../avis/donner_avis_sheet.dart';
 
 /// 📋 Les rendez-vous pris par le client (avec sa session actuelle)
 class MesRdvScreen extends StatefulWidget {
@@ -16,6 +18,7 @@ class MesRdvScreen extends StatefulWidget {
 
 class _MesRdvScreenState extends State<MesRdvScreen> {
   List<RendezVous> _mes = [];
+  Set<String> _avisDonnes = {};
   bool _charge = false;
   String? _erreur;
 
@@ -40,9 +43,21 @@ class _MesRdvScreenState extends State<MesRdvScreen> {
 
     try {
       final mes = await RdvService.mesRdvs(uid);
+
+      // Pour les RDV terminés : lesquels ont déjà reçu un avis ?
+      var avisDonnes = <String>{};
+      try {
+        avisDonnes = await AvisService.idsDonnes(
+          mes.where((r) => r.statut == StatutRdv.termine),
+        );
+      } catch (e) {
+        debugPrint('Erreur lecture des avis : $e');
+      }
+
       if (!mounted) return;
       setState(() {
         _mes = mes;
+        _avisDonnes = avisDonnes;
         _erreur = null;
         _charge = true;
       });
@@ -89,6 +104,17 @@ class _MesRdvScreenState extends State<MesRdvScreen> {
         const SnackBar(content: Text('Impossible d\'annuler. Réessaie.')),
       );
     }
+  }
+
+  Future<void> _donnerAvis(RendezVous rdv) async {
+    final envoye = await donnerAvis(context, rdv);
+    if (envoye != true || !mounted) return;
+    setState(() {
+      _avisDonnes = {..._avisDonnes, rdv.id};
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Merci pour ton avis !')),
+    );
   }
 
   @override
@@ -139,7 +165,15 @@ class _MesRdvScreenState extends State<MesRdvScreen> {
             const SizedBox(height: 12),
             Text('Historique', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 12),
-            for (final r in passes) _CarteMonRdv(rdv: r),
+            for (final r in passes)
+              _CarteMonRdv(
+                rdv: r,
+                avisDonne: _avisDonnes.contains(r.id),
+                onAvis: r.statut == StatutRdv.termine &&
+                        !_avisDonnes.contains(r.id)
+                    ? () => _donnerAvis(r)
+                    : null,
+              ),
           ],
         ],
       ),
@@ -184,8 +218,15 @@ class _Vide extends StatelessWidget {
 class _CarteMonRdv extends StatelessWidget {
   final RendezVous rdv;
   final VoidCallback? onAnnuler;
+  final VoidCallback? onAvis;
+  final bool avisDonne;
 
-  const _CarteMonRdv({required this.rdv, this.onAnnuler});
+  const _CarteMonRdv({
+    required this.rdv,
+    this.onAnnuler,
+    this.onAvis,
+    this.avisDonne = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -264,6 +305,37 @@ class _CarteMonRdv extends StatelessWidget {
                           ),
                         ),
                       ),
+                      if (rdv.statut == StatutRdv.termine)
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: avisDonne
+                              ? const Padding(
+                                  padding: EdgeInsets.only(top: 6),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.check_circle_outline,
+                                          size: 16,
+                                          color: AppColors.statutConfirme),
+                                      SizedBox(width: 6),
+                                      Text(
+                                        'Avis envoyé',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: AppColors.onSurfaceVariant,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                )
+                              : TextButton.icon(
+                                  onPressed: onAvis,
+                                  icon: const Icon(
+                                      Icons.star_outline_rounded,
+                                      size: 18),
+                                  label: const Text('Donner mon avis'),
+                                ),
+                        ),
                       if (rdv.statut == StatutRdv.enAttente &&
                           onAnnuler != null)
                         const Padding(

@@ -7,6 +7,8 @@ import '../../services/prestation_service.dart';
 import '../../services/salon_service.dart';
 import '../../theme/app_colors.dart';
 import '../accueil_screen.dart';
+import '../avis/avis_screen.dart';
+import 'lien_reservation.dart';
 import 'prestation_form.dart';
 
 /// 👤 Profil du salon
@@ -174,6 +176,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 title: Text(salon.telephone),
               ),
             ),
+            const SizedBox(height: 10),
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.qr_code_2, color: AppColors.goldDark),
+                title: const Text('Lien et QR code de réservation'),
+                subtitle: const Text('À partager avec vos clients'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => afficherLienReservation(context, salon),
+              ),
+            ),
+            const SizedBox(height: 10),
+            CarteAvisSalon(salon: salon, estCoiffeur: true),
           ],
           const SizedBox(height: 28),
 

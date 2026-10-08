@@ -4,6 +4,7 @@ import 'package:intl/date_symbol_data_local.dart';
 
 import 'firebase_options.dart';
 import 'screens/accueil_screen.dart';
+import 'screens/client/client_home_screen.dart';
 import 'theme/app_theme.dart';
 
 Future<void> main() async {
@@ -23,11 +24,17 @@ class MonCoiffeurApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Lien de réservation : https://.../?salon=IDENTIFIANT
+    final salonId = Uri.base.queryParameters['salon'];
+    final viensDUnLien = salonId != null && salonId.isNotEmpty;
+
     return MaterialApp(
       title: 'Mon Coiffeur',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
-      home: const AccueilScreen(), // on choisit d'abord : client ou coiffeur
+      home: viensDUnLien
+          ? ClientHomeScreen(salonIdInitial: salonId)
+          : const AccueilScreen(), // sinon on choisit : client ou coiffeur
     );
   }
 }

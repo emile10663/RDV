@@ -23,6 +23,14 @@ class SalonService {
     return Salon.fromJson(doc.id, doc.data());
   }
 
+  /// Un salon précis (pour le lien de réservation). Null s'il n'existe pas.
+  static Future<Salon?> parId(String id) async {
+    final doc = await _salons.doc(id).get().timeout(const Duration(seconds: 15));
+    final donnees = doc.data();
+    if (!doc.exists || donnees == null) return null;
+    return Salon.fromJson(doc.id, donnees);
+  }
+
   /// Tous les salons (pour que le client choisisse le sien)
   static Future<List<Salon>> tous() async {
     final resultat = await _salons.orderBy('nom').get();

@@ -9,6 +9,7 @@ import '../../services/prestation_service.dart';
 import '../../services/rdv_service.dart';
 import '../../theme/app_colors.dart';
 import '../accueil_screen.dart';
+import '../avis/avis_screen.dart';
 import '../booking/nouveau_rdv_screen.dart';
 
 /// 💈 Page du salon vue par le client : présentation + prestations
@@ -108,6 +109,8 @@ class _SalonScreenState extends State<SalonScreen> {
       );
       if (!mounted) return;
       _message('Demande envoyée ! Le salon va la confirmer.');
+    } on CreneauPrisException catch (e) {
+      if (mounted) _message(e.message);
     } catch (e) {
       debugPrint('Erreur envoi demande : $e');
       if (mounted) {
@@ -205,6 +208,12 @@ class _SalonScreenState extends State<SalonScreen> {
                 ),
               ],
             ),
+          ),
+
+          // ─── Avis des clients ───
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+            child: CarteAvisSalon(salon: salon),
           ),
 
           // ─── Prestations ───
