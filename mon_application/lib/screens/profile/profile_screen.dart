@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../data/horaires.dart';
+import '../../models/horaires_salon.dart';
 import '../../models/prestation.dart';
 import '../../models/salon.dart';
 import '../../services/auth_service.dart';
@@ -9,6 +9,7 @@ import '../../services/salon_service.dart';
 import '../../theme/app_colors.dart';
 import '../accueil_screen.dart';
 import '../avis/avis_screen.dart';
+import 'horaires_screen.dart';
 import 'lien_reservation.dart';
 import 'prestation_form.dart';
 
@@ -56,6 +57,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _chargement = false;
       });
     }
+  }
+
+  Future<void> _modifierHoraires(Salon salon) async {
+    final nouveaux = await Navigator.of(context).push<HorairesSalon>(
+      MaterialPageRoute(builder: (_) => HorairesScreen(salon: salon)),
+    );
+    if (nouveaux == null || !mounted) return;
+    setState(() {
+      _salon = salon.copyWith(horaires: nouveaux);
+    });
+    _message('Horaires enregistrés.');
   }
 
   void _message(String texte) {
@@ -136,7 +148,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final haut = MediaQuery.of(context).padding.top;
-    String h(int heure) => '${heure.toString().padLeft(2, '0')}:00';
     final salon = _salon;
 
     return Scaffold(
@@ -201,16 +212,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
           // ─── Horaires ───
           Text('Horaires', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 12),
-          Card(
-            child: ListTile(
-              leading: const Icon(Icons.schedule, color: AppColors.primary),
-              title: const Text('Créneaux proposés'),
-              trailing: Text(
-                '${h(heureOuverture)} – ${h(heureFermeture)}',
-                style: const TextStyle(fontWeight: FontWeight.w700),
+          if (salon != null)
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.schedule, color: AppColors.primary),
+                title: const Text('Horaires et congés'),
+                subtitle: Text(
+                  '${salon.horaires.joursOuverts} jours ouverts par semaine',
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => _modifierHoraires(salon),
               ),
             ),
-          ),
           const SizedBox(height: 24),
 
           // ─── Prestations ───

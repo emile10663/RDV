@@ -1,7 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
-import '../../data/horaires.dart';
+import '../../models/horaires_salon.dart';
 import '../../models/prestation.dart';
 import '../../models/rendez_vous.dart';
 import '../../models/salon.dart';
@@ -9,6 +9,7 @@ import '../../services/auth_service.dart';
 import '../../services/prestation_service.dart';
 import '../../services/rdv_service.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/horaires_semaine.dart';
 import '../accueil_screen.dart';
 import '../avis/avis_screen.dart';
 import '../booking/nouveau_rdv_screen.dart';
@@ -96,6 +97,7 @@ class _SalonScreenState extends State<SalonScreen> {
           prestations: _prestations,
           rdvsExistants: occupes,
           modeClient: true,
+          horaires: widget.salon.horaires,
         ),
       ),
     );
@@ -121,7 +123,12 @@ class _SalonScreenState extends State<SalonScreen> {
     }
   }
 
-  String _h(int heure) => '${heure.toString().padLeft(2, '0')}:00';
+  String _texteHoraireDuJour(HorairesSalon horaires) {
+    final plage = horaires.plageDuJour(DateTime.now());
+    return plage == null
+        ? 'Fermé aujourd\'hui'
+        : 'Aujourd\'hui : ${plage.texte}';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -197,8 +204,8 @@ class _SalonScreenState extends State<SalonScreen> {
                   children: [
                     _PastilleEntete(
                       icone: Icons.schedule,
-                      texte:
-                          'Ouvert de ${_h(heureOuverture)} à ${_h(heureFermeture)}',
+                      texte: _texteHoraireDuJour(salon.horaires),
+                      onTap: () => afficherHoraires(context, salon.horaires),
                     ),
                     _PastilleEntete(
                       icone: Icons.phone_outlined,
@@ -256,27 +263,39 @@ class _SalonScreenState extends State<SalonScreen> {
 class _PastilleEntete extends StatelessWidget {
   final IconData icone;
   final String texte;
+  final VoidCallback? onTap;
 
-  const _PastilleEntete({required this.icone, required this.texte});
+  const _PastilleEntete({
+    required this.icone,
+    required this.texte,
+    this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icone, size: 16, color: AppColors.accent),
-          const SizedBox(width: 6),
-          Text(
-            texte,
-            style: const TextStyle(color: Colors.white, fontSize: 13),
-          ),
-        ],
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.10),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icone, size: 16, color: AppColors.accent),
+            const SizedBox(width: 6),
+            Text(
+              texte,
+              style: const TextStyle(color: Colors.white, fontSize: 13),
+            ),
+            if (onTap != null) ...[
+              const SizedBox(width: 4),
+              const Icon(Icons.expand_more, size: 16, color: Colors.white70),
+            ],
+          ],
+        ),
       ),
     );
   }

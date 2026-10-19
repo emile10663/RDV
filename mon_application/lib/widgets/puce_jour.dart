@@ -8,6 +8,7 @@ class PuceJour extends StatelessWidget {
   final DateTime jour;
   final bool selected;
   final bool pastille;
+  final bool ferme; // salon fermé ce jour-là : pastille estompée
   final VoidCallback onTap;
 
   const PuceJour({
@@ -16,6 +17,7 @@ class PuceJour extends StatelessWidget {
     required this.selected,
     required this.onTap,
     this.pastille = false,
+    this.ferme = false,
   });
 
   /// Largeur + espace : utile pour positionner le défilement
@@ -31,7 +33,9 @@ class PuceJour extends StatelessWidget {
     final texte = selected ? Colors.white : AppColors.onSurface;
     final discret = selected ? Colors.white70 : AppColors.onSurfaceVariant;
 
-    return GestureDetector(
+    return Opacity(
+      opacity: ferme && !selected ? 0.4 : 1,
+      child: GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: AnimatedContainer(
@@ -71,6 +75,7 @@ class PuceJour extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }

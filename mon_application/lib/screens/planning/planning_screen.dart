@@ -133,6 +133,7 @@ class _PlanningScreenState extends State<PlanningScreen> {
           prestations: prestations,
           rdvsExistants: _rdvs,
           jourInitial: _jourChoisi,
+          horaires: salon.horaires,
         ),
       ),
     );
@@ -219,6 +220,7 @@ class _PlanningScreenState extends State<PlanningScreen> {
                   jour: jour,
                   selected: jour == _jourChoisi,
                   pastille: joursAvecRdv.contains(jour),
+                  ferme: _salon?.horaires.estOuvert(jour) == false,
                   onTap: () => setState(() => _jourChoisi = jour),
                 );
               },

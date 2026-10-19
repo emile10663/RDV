@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../models/horaires_salon.dart';
 import '../models/salon.dart';
 import 'auth_service.dart';
 import 'base_donnees.dart';
@@ -36,6 +37,15 @@ class SalonService {
     final resultat = await _salons.orderBy('nom').get();
     return resultat.docs.map((d) => Salon.fromJson(d.id, d.data())).toList();
   }
+
+  /// Enregistre les horaires et les jours de congé du salon
+  static Future<void> mettreAJourHoraires(
+    String salonId,
+    HorairesSalon horaires,
+  ) => _salons
+      .doc(salonId)
+      .update({'horaires': horaires.toJson()})
+      .timeout(const Duration(seconds: 15));
 
   /// Crée le salon du coiffeur connecté
   static Future<Salon> creer({

@@ -2,8 +2,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../../data/horaires.dart';
 import '../../models/client.dart';
+import '../../models/horaires_salon.dart';
 import '../../models/prestation.dart';
 import '../../models/rendez_vous.dart';
 import '../../theme/app_colors.dart';
@@ -23,12 +23,16 @@ class NouveauRdvScreen extends StatefulWidget {
   /// Vrai quand c'est un client qui réserve (téléphone obligatoire, textes adaptés)
   final bool modeClient;
 
+  /// Horaires et congés du salon : seuls les jours ouverts ont des créneaux
+  final HorairesSalon horaires;
+
   const NouveauRdvScreen({
     super.key,
     required this.prestations,
     this.rdvsExistants = const [],
     this.jourInitial,
     this.modeClient = false,
+    this.horaires = HorairesSalon.parDefaut,
   });
 
   @override
@@ -78,13 +82,15 @@ class _NouveauRdvScreenState extends State<NouveauRdvScreen> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(texte)));
   }
 
-  /// Tous les créneaux de la journée (toutes les 30 min)
-  List<TimeOfDay> get _creneaux => [
-    for (var h = heureOuverture; h < heureFermeture; h++) ...[
-      TimeOfDay(hour: h, minute: 0),
-      TimeOfDay(hour: h, minute: 30),
-    ],
-  ];
+  /// Tous les créneaux du jour choisi (toutes les 30 min, selon les horaires)
+  List<TimeOfDay> get _creneaux {
+    final plage = widget.horaires.plageDuJour(_jour);
+    if (plage == null) return [];
+    return [
+      for (var m = plage.ouverture; m < plage.fermeture; m += 30)
+        TimeOfDay(hour: m ~/ 60, minute: m % 60),
+    ];
+  }
 
   DateTime _debut(TimeOfDay t) =>
       DateTime(_jour.year, _jour.month, _jour.day, t.hour, t.minute);
@@ -95,13 +101,17 @@ class _NouveauRdvScreenState extends State<NouveauRdvScreen> {
     final debut = _debut(t);
     if (debut.isBefore(DateTime.now())) return false;
 
+    final plage = widget.horaires.plageDuJour(_jour);
+    if (plage == null) return false;
+
     final duree = _prestation?.duree ?? const Duration(minutes: 30);
     final fin = debut.add(duree);
     final fermeture = DateTime(
       _jour.year,
       _jour.month,
       _jour.day,
-      heureFermeture,
+      0,
+      plage.fermeture,
     );
     if (fin.isAfter(fermeture)) return false;
 
@@ -238,6 +248,7 @@ class _NouveauRdvScreenState extends State<NouveauRdvScreen> {
                   return PuceJour(
                     jour: jour,
                     selected: jour == _jour,
+                    ferme: !widget.horaires.estOuvert(jour),
                     onTap: () => setState(() {
                       _jour = jour;
                       _verifierHeure();
@@ -249,7 +260,18 @@ class _NouveauRdvScreenState extends State<NouveauRdvScreen> {
 
             // ─── 4. Heure ───
             const _Titre('Heure', numero: 4),
-            if (prestation == null)
+            if (!widget.horaires.estOuvert(_jour))
+              const Padding(
+                padding: EdgeInsets.only(bottom: 10),
+                child: Text(
+                  'Le salon est fermé ce jour-là. Choisis un autre jour.',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppColors.onSurfaceVariant,
+                  ),
+                ),
+              )
+            else if (prestation == null)
               const Padding(
                 padding: EdgeInsets.only(bottom: 10),
                 child: Text(
