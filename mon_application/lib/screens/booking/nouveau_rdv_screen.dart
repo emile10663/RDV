@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../data/horaires.dart';
@@ -58,12 +59,15 @@ class _NouveauRdvScreenState extends State<NouveauRdvScreen> {
         ? _aujourdhui
         : DateTime(init.year, init.month, init.day);
     final index = DateTime.utc(_jour.year, _jour.month, _jour.day)
-        .difference(DateTime.utc(
-            _aujourdhui.year, _aujourdhui.month, _aujourdhui.day))
+        .difference(
+          DateTime.utc(_aujourdhui.year, _aujourdhui.month, _aujourdhui.day),
+        )
         .inDays;
     _bandeau = ScrollController(
-      initialScrollOffset:
-          math.max(0, index * (PuceJour.largeur + PuceJour.espace)),
+      initialScrollOffset: math.max(
+        0,
+        index * (PuceJour.largeur + PuceJour.espace),
+      ),
     );
   }
 
@@ -71,17 +75,16 @@ class _NouveauRdvScreenState extends State<NouveauRdvScreen> {
       (valeur == null || valeur.trim().isEmpty) ? 'Champ obligatoire' : null;
 
   void _message(String texte) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(texte)));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(texte)));
   }
 
   /// Tous les créneaux de la journée (toutes les 30 min)
   List<TimeOfDay> get _creneaux => [
-        for (var h = heureOuverture; h < heureFermeture; h++) ...[
-          TimeOfDay(hour: h, minute: 0),
-          TimeOfDay(hour: h, minute: 30),
-        ],
-      ];
+    for (var h = heureOuverture; h < heureFermeture; h++) ...[
+      TimeOfDay(hour: h, minute: 0),
+      TimeOfDay(hour: h, minute: 30),
+    ],
+  ];
 
   DateTime _debut(TimeOfDay t) =>
       DateTime(_jour.year, _jour.month, _jour.day, t.hour, t.minute);
@@ -94,8 +97,12 @@ class _NouveauRdvScreenState extends State<NouveauRdvScreen> {
 
     final duree = _prestation?.duree ?? const Duration(minutes: 30);
     final fin = debut.add(duree);
-    final fermeture =
-        DateTime(_jour.year, _jour.month, _jour.day, heureFermeture);
+    final fermeture = DateTime(
+      _jour.year,
+      _jour.month,
+      _jour.day,
+      heureFermeture,
+    );
     if (fin.isAfter(fermeture)) return false;
 
     return !widget.rdvsExistants
@@ -194,8 +201,9 @@ class _NouveauRdvScreenState extends State<NouveauRdvScreen> {
               controller: _telController,
               keyboardType: TextInputType.phone,
               decoration: InputDecoration(
-                labelText:
-                    widget.modeClient ? 'Téléphone' : 'Téléphone (facultatif)',
+                labelText: widget.modeClient
+                    ? 'Téléphone'
+                    : 'Téléphone (facultatif)',
                 prefixIcon: const Icon(Icons.phone_outlined),
               ),
               validator: widget.modeClient ? _obligatoire : null,
@@ -291,15 +299,17 @@ class _NouveauRdvScreenState extends State<NouveauRdvScreen> {
                       textAlign: TextAlign.center,
                       style: const TextStyle(
                         fontWeight: FontWeight.w600,
-                        color: AppColors.goldDark,
+                        color: AppColors.primary,
                       ),
                     ),
                   ),
                 ElevatedButton(
                   onPressed: _valider,
-                  child: Text(widget.modeClient
-                      ? 'Envoyer ma demande'
-                      : 'Confirmer le rendez-vous'),
+                  child: Text(
+                    widget.modeClient
+                        ? 'Envoyer ma demande'
+                        : 'Confirmer le rendez-vous',
+                  ),
                 ),
               ],
             ),
@@ -343,7 +353,7 @@ class _Titre extends StatelessWidget {
             child: Text(
               '$numero',
               style: const TextStyle(
-                color: AppColors.gold,
+                color: AppColors.accent,
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
               ),
@@ -381,7 +391,7 @@ class _TuilePrestation extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: selected ? AppColors.goldSoft : AppColors.card,
+          color: selected ? AppColors.secondary : AppColors.card,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: selected ? AppColors.primary : AppColors.border,
@@ -414,8 +424,11 @@ class _TuilePrestation extends StatelessWidget {
                   const SizedBox(height: 6),
                   Row(
                     children: [
-                      const Icon(Icons.schedule,
-                          size: 14, color: AppColors.onSurfaceVariant),
+                      const Icon(
+                        Icons.schedule,
+                        size: 14,
+                        color: AppColors.onSurfaceVariant,
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         '${prestation.duree.inMinutes} min',
@@ -438,7 +451,7 @@ class _TuilePrestation extends StatelessWidget {
                   style: const TextStyle(
                     fontWeight: FontWeight.w700,
                     fontSize: 16,
-                    color: AppColors.goldDark,
+                    color: AppColors.primary,
                   ),
                 ),
                 const SizedBox(height: 6),

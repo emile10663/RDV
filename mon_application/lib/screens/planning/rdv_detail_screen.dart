@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../models/client.dart';
 import '../../models/rendez_vous.dart';
 import '../../theme/app_colors.dart';
@@ -39,7 +40,7 @@ class RdvDetailScreen extends StatelessWidget {
               children: [
                 CircleAvatar(
                   radius: 36,
-                  backgroundColor: AppColors.gold,
+                  backgroundColor: AppColors.accent,
                   child: Text(
                     _initiales(rdv.client),
                     style: const TextStyle(
@@ -53,20 +54,20 @@ class RdvDetailScreen extends StatelessWidget {
                 Text(
                   rdv.client.nomComplet,
                   textAlign: TextAlign.center,
-                  style: Theme.of(context)
-                      .textTheme
-                      .headlineMedium!
+                  style: Theme.of(context).textTheme.headlineMedium!
                       .copyWith(color: Colors.white),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   rdv.prestation.nom,
-                  style: const TextStyle(color: AppColors.gold, fontSize: 15),
+                  style: const TextStyle(color: AppColors.accent, fontSize: 15),
                 ),
                 const SizedBox(height: 14),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(20),
@@ -145,10 +146,10 @@ class _Ligne extends StatelessWidget {
             width: 42,
             height: 42,
             decoration: BoxDecoration(
-              color: AppColors.goldSoft,
+              color: AppColors.secondary,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(icone, size: 20, color: AppColors.goldDark),
+            child: Icon(icone, size: 20, color: AppColors.primary),
           ),
           const SizedBox(width: 14),
           Expanded(

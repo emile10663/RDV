@@ -25,16 +25,19 @@ class AccueilScreen extends StatelessWidget {
                     height: 96,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      border: Border.all(color: AppColors.gold, width: 3),
+                      border: Border.all(color: AppColors.accent, width: 3),
                     ),
-                    child: const Icon(Icons.content_cut,
-                        size: 40, color: AppColors.gold),
+                    child: const Icon(
+                      Icons.content_cut,
+                      size: 40,
+                      color: AppColors.accent,
+                    ),
                   ),
                   const SizedBox(height: 24),
                   const Text(
                     'MON SALON',
                     style: TextStyle(
-                      color: AppColors.gold,
+                      color: AppColors.accent,
                       fontSize: 13,
                       letterSpacing: 3,
                       fontWeight: FontWeight.w700,
@@ -43,9 +46,7 @@ class AccueilScreen extends StatelessWidget {
                   const SizedBox(height: 10),
                   Text(
                     'Bienvenue',
-                    style: Theme.of(context)
-                        .textTheme
-                        .headlineLarge!
+                    style: Theme.of(context).textTheme.headlineLarge!
                         .copyWith(color: Colors.white),
                   ),
                   const SizedBox(height: 8),
@@ -73,8 +74,7 @@ class AccueilScreen extends StatelessWidget {
                     sousTitre: 'Gérer mon planning',
                     clair: false,
                     onTap: () => Navigator.of(context).pushReplacement(
-                      MaterialPageRoute(
-                          builder: (_) => const PorteCoiffeur()),
+                      MaterialPageRoute(builder: (_) => const PorteCoiffeur()),
                     ),
                   ),
                 ],
@@ -120,7 +120,7 @@ class _ChoixCarte extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: clair ? Colors.transparent : AppColors.gold,
+              color: clair ? Colors.transparent : AppColors.accent,
             ),
           ),
           child: Row(
@@ -129,12 +129,12 @@ class _ChoixCarte extends StatelessWidget {
                 width: 50,
                 height: 50,
                 decoration: BoxDecoration(
-                  color: clair ? AppColors.primary : AppColors.gold,
+                  color: clair ? AppColors.primary : AppColors.accent,
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Icon(
                   icone,
-                  color: clair ? AppColors.gold : Colors.black,
+                  color: clair ? AppColors.accent : Colors.black,
                 ),
               ),
               const SizedBox(width: 16),

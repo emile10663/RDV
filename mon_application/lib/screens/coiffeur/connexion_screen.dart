@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../services/auth_service.dart';
 import '../../theme/app_colors.dart';
 import '../accueil_screen.dart';
@@ -72,17 +73,18 @@ class _ConnexionScreenState extends State<ConnexionScreen> {
                     height: 80,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      border: Border.all(color: AppColors.gold, width: 3),
+                      border: Border.all(color: AppColors.accent, width: 3),
                     ),
-                    child: const Icon(Icons.content_cut,
-                        size: 34, color: AppColors.gold),
+                    child: const Icon(
+                      Icons.content_cut,
+                      size: 34,
+                      color: AppColors.accent,
+                    ),
                   ),
                   const SizedBox(height: 20),
                   Text(
                     _inscription ? 'Créer mon compte' : 'Espace coiffeur',
-                    style: Theme.of(context)
-                        .textTheme
-                        .headlineMedium!
+                    style: Theme.of(context).textTheme.headlineMedium!
                         .copyWith(color: Colors.white),
                   ),
                   const SizedBox(height: 24),
@@ -115,9 +117,11 @@ class _ConnexionScreenState extends State<ConnexionScreen> {
                             prefixIcon: const Icon(Icons.lock_outline),
                             border: const OutlineInputBorder(),
                             suffixIcon: IconButton(
-                              icon: Icon(_mdpCache
-                                  ? Icons.visibility_outlined
-                                  : Icons.visibility_off_outlined),
+                              icon: Icon(
+                                _mdpCache
+                                    ? Icons.visibility_outlined
+                                    : Icons.visibility_off_outlined,
+                              ),
                               onPressed: () =>
                                   setState(() => _mdpCache = !_mdpCache),
                             ),
@@ -138,22 +142,27 @@ class _ConnexionScreenState extends State<ConnexionScreen> {
                                   width: 20,
                                   height: 20,
                                   child: CircularProgressIndicator(
-                                      strokeWidth: 2),
+                                    strokeWidth: 2,
+                                  ),
                                 )
-                              : Text(_inscription
-                                  ? 'Créer mon compte'
-                                  : 'Se connecter'),
+                              : Text(
+                                  _inscription
+                                      ? 'Créer mon compte'
+                                      : 'Se connecter',
+                                ),
                         ),
                         TextButton(
                           onPressed: _chargement
                               ? null
                               : () => setState(() {
-                                    _inscription = !_inscription;
-                                    _erreur = null;
-                                  }),
-                          child: Text(_inscription
-                              ? 'J\'ai déjà un compte'
-                              : 'Pas de compte ? Créer le mien'),
+                                  _inscription = !_inscription;
+                                  _erreur = null;
+                                }),
+                          child: Text(
+                            _inscription
+                                ? 'J\'ai déjà un compte'
+                                : 'Pas de compte ? Créer le mien',
+                          ),
                         ),
                       ],
                     ),
@@ -164,8 +173,10 @@ class _ConnexionScreenState extends State<ConnexionScreen> {
                       MaterialPageRoute(builder: (_) => const AccueilScreen()),
                     ),
                     icon: const Icon(Icons.arrow_back, color: Colors.white70),
-                    label: const Text('Retour',
-                        style: TextStyle(color: Colors.white70)),
+                    label: const Text(
+                      'Retour',
+                      style: TextStyle(color: Colors.white70),
+                    ),
                   ),
                 ],
               ),

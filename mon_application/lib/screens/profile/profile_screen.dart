@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../data/horaires.dart';
 import '../../models/prestation.dart';
 import '../../models/salon.dart';
@@ -58,8 +59,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _message(String texte) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(texte)));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(texte)));
   }
 
   Future<void> _rechargerPrestations() async {
@@ -77,8 +77,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final salon = _salon;
     if (salon == null) return;
 
-    final resultat =
-        await afficherFormulairePrestation(context, existante: existante);
+    final resultat = await afficherFormulairePrestation(
+      context,
+      existante: existante,
+    );
     if (resultat == null) return;
 
     try {
@@ -149,10 +151,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
               decoration: BoxDecoration(
                 gradient: AppColors.enTete,
                 shape: BoxShape.circle,
-                border: Border.all(color: AppColors.gold, width: 3),
+                border: Border.all(color: AppColors.accent, width: 3),
               ),
-              child: const Icon(Icons.content_cut,
-                  size: 40, color: AppColors.gold),
+              child: const Icon(
+                Icons.content_cut,
+                size: 40,
+                color: AppColors.accent,
+              ),
             ),
           ),
           const SizedBox(height: 16),
@@ -171,15 +176,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
             const SizedBox(height: 16),
             Card(
               child: ListTile(
-                leading:
-                    const Icon(Icons.phone_outlined, color: AppColors.goldDark),
+                leading: const Icon(
+                  Icons.phone_outlined,
+                  color: AppColors.primary,
+                ),
                 title: Text(salon.telephone),
               ),
             ),
             const SizedBox(height: 10),
             Card(
               child: ListTile(
-                leading: const Icon(Icons.qr_code_2, color: AppColors.goldDark),
+                leading: const Icon(Icons.qr_code_2, color: AppColors.primary),
                 title: const Text('Lien et QR code de réservation'),
                 subtitle: const Text('À partager avec vos clients'),
                 trailing: const Icon(Icons.chevron_right),
@@ -196,7 +203,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const SizedBox(height: 12),
           Card(
             child: ListTile(
-              leading: const Icon(Icons.schedule, color: AppColors.goldDark),
+              leading: const Icon(Icons.schedule, color: AppColors.primary),
               title: const Text('Créneaux proposés'),
               trailing: Text(
                 '${h(heureOuverture)} – ${h(heureFermeture)}',
@@ -210,8 +217,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Row(
             children: [
               Expanded(
-                child: Text('Prestations',
-                    style: Theme.of(context).textTheme.titleMedium),
+                child: Text(
+                  'Prestations',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
               ),
               if (salon != null)
                 TextButton.icon(
@@ -231,10 +240,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             Column(
               children: [
                 Text(_erreur!),
-                TextButton(
-                  onPressed: _charger,
-                  child: const Text('Réessayer'),
-                ),
+                TextButton(onPressed: _charger, child: const Text('Réessayer')),
               ],
             )
           else if (_prestations.isEmpty)
@@ -242,7 +248,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: ListTile(
                 leading: Icon(Icons.info_outline),
                 title: Text('Aucune prestation pour l\'instant'),
-                subtitle: Text('Appuie sur « Ajouter » pour créer la première.'),
+                subtitle: Text(
+                  'Appuie sur « Ajouter » pour créer la première.',
+                ),
               ),
             )
           else
@@ -263,7 +271,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           '${p.prix.toStringAsFixed(2).replaceAll('.', ',')} €',
                           style: const TextStyle(
                             fontWeight: FontWeight.w700,
-                            color: AppColors.goldDark,
+                            color: AppColors.primary,
                           ),
                         ),
                         PopupMenuButton<String>(
@@ -273,9 +281,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           },
                           itemBuilder: (_) => const [
                             PopupMenuItem(
-                                value: 'modifier', child: Text('Modifier')),
+                              value: 'modifier',
+                              child: Text('Modifier'),
+                            ),
                             PopupMenuItem(
-                                value: 'supprimer', child: Text('Supprimer')),
+                              value: 'supprimer',
+                              child: Text('Supprimer'),
+                            ),
                           ],
                         ),
                       ],

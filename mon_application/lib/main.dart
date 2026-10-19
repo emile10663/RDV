@@ -1,6 +1,7 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:mon_application/services/notification_service.dart';
 
 import 'firebase_options.dart';
 import 'screens/accueil_screen.dart';
@@ -15,6 +16,10 @@ Future<void> main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  // ← Ajoute ces lignes
+  final notificationService = NotificationService();
+  await notificationService.init();
 
   runApp(const MonCoiffeurApp());
 }

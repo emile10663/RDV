@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+
 import '../../models/rendez_vous.dart';
 import '../../services/auth_service.dart';
 import '../../services/avis_service.dart';
@@ -112,9 +113,8 @@ class _MesRdvScreenState extends State<MesRdvScreen> {
     setState(() {
       _avisDonnes = {..._avisDonnes, rdv.id};
     });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Merci pour ton avis !')),
-    );
+    ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text('Merci pour ton avis !')));
   }
 
   @override
@@ -122,13 +122,16 @@ class _MesRdvScreenState extends State<MesRdvScreen> {
     final haut = MediaQuery.of(context).padding.top;
     final maintenant = DateTime.now();
 
-    final aVenir = _mes
-        .where((r) =>
-            r.dateHeure.isAfter(maintenant) &&
-            (r.statut == StatutRdv.enAttente ||
-                r.statut == StatutRdv.confirme))
-        .toList()
-      ..sort((a, b) => a.dateHeure.compareTo(b.dateHeure));
+    final aVenir =
+        _mes
+            .where(
+              (r) =>
+                  r.dateHeure.isAfter(maintenant) &&
+                  (r.statut == StatutRdv.enAttente ||
+                      r.statut == StatutRdv.confirme),
+            )
+            .toList()
+          ..sort((a, b) => a.dateHeure.compareTo(b.dateHeure));
     final passes = _mes.where((r) => !aVenir.contains(r)).toList()
       ..sort((a, b) => b.dateHeure.compareTo(a.dateHeure));
 
@@ -136,8 +139,10 @@ class _MesRdvScreenState extends State<MesRdvScreen> {
       body: ListView(
         padding: EdgeInsets.fromLTRB(16, haut + 16, 16, 24),
         children: [
-          Text('Mes rendez-vous',
-              style: Theme.of(context).textTheme.headlineMedium),
+          Text(
+            'Mes rendez-vous',
+            style: Theme.of(context).textTheme.headlineMedium,
+          ),
           const SizedBox(height: 20),
           if (!_charge)
             const Padding(
@@ -148,10 +153,7 @@ class _MesRdvScreenState extends State<MesRdvScreen> {
             Column(
               children: [
                 Text(_erreur!),
-                TextButton(
-                  onPressed: _charger,
-                  child: const Text('Réessayer'),
-                ),
+                TextButton(onPressed: _charger, child: const Text('Réessayer')),
               ],
             ),
           if (_charge && _erreur == null && _mes.isEmpty) const _Vide(),
@@ -169,8 +171,8 @@ class _MesRdvScreenState extends State<MesRdvScreen> {
               _CarteMonRdv(
                 rdv: r,
                 avisDonne: _avisDonnes.contains(r.id),
-                onAvis: r.statut == StatutRdv.termine &&
-                        !_avisDonnes.contains(r.id)
+                onAvis:
+                    r.statut == StatutRdv.termine && !_avisDonnes.contains(r.id)
                     ? () => _donnerAvis(r)
                     : null,
               ),
@@ -194,15 +196,20 @@ class _Vide extends StatelessWidget {
             width: 84,
             height: 84,
             decoration: const BoxDecoration(
-              color: AppColors.goldSoft,
+              color: AppColors.secondary,
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.event_note,
-                size: 36, color: AppColors.goldDark),
+            child: const Icon(
+              Icons.event_note,
+              size: 36,
+              color: AppColors.primary,
+            ),
           ),
           const SizedBox(height: 18),
-          Text('Aucun rendez-vous',
-              style: Theme.of(context).textTheme.titleLarge),
+          Text(
+            'Aucun rendez-vous',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
           const SizedBox(height: 6),
           const Text(
             'Va sur « Le salon » pour réserver.',
@@ -276,7 +283,7 @@ class _CarteMonRdv extends StatelessWidget {
                             '$prix €',
                             style: const TextStyle(
                               fontWeight: FontWeight.w700,
-                              color: AppColors.goldDark,
+                              color: AppColors.primary,
                             ),
                           ),
                         ],
@@ -291,7 +298,9 @@ class _CarteMonRdv extends StatelessWidget {
                       const SizedBox(height: 10),
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: couleur.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(20),
@@ -314,9 +323,11 @@ class _CarteMonRdv extends StatelessWidget {
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      Icon(Icons.check_circle_outline,
-                                          size: 16,
-                                          color: AppColors.statutConfirme),
+                                      Icon(
+                                        Icons.check_circle_outline,
+                                        size: 16,
+                                        color: AppColors.statutConfirme,
+                                      ),
                                       SizedBox(width: 6),
                                       Text(
                                         'Avis envoyé',
@@ -331,8 +342,9 @@ class _CarteMonRdv extends StatelessWidget {
                               : TextButton.icon(
                                   onPressed: onAvis,
                                   icon: const Icon(
-                                      Icons.star_outline_rounded,
-                                      size: 18),
+                                    Icons.star_outline_rounded,
+                                    size: 18,
+                                  ),
                                   label: const Text('Donner mon avis'),
                                 ),
                         ),

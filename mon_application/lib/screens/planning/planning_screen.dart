@@ -1,6 +1,8 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+
 import '../../models/prestation.dart';
 import '../../models/rendez_vous.dart';
 import '../../models/salon.dart';
@@ -51,8 +53,7 @@ class _PlanningScreenState extends State<PlanningScreen> {
   }
 
   void _message(String texte) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(texte)));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(texte)));
   }
 
   /// Charge le salon puis écoute ses rendez-vous en direct
@@ -175,8 +176,9 @@ class _PlanningScreenState extends State<PlanningScreen> {
   Widget build(BuildContext context) {
     final aujourdhui = _jour(DateTime.now());
 
-    final duJour = _rdvs.where((r) => _jour(r.dateHeure) == _jourChoisi).toList()
-      ..sort((a, b) => a.dateHeure.compareTo(b.dateHeure));
+    final duJour =
+        _rdvs.where((r) => _jour(r.dateHeure) == _jourChoisi).toList()
+          ..sort((a, b) => a.dateHeure.compareTo(b.dateHeure));
     final actifs = duJour.where((r) => r.statut != StatutRdv.annule);
     final ca = actifs.fold<double>(0, (t, r) => t + r.prestation.prix);
     final joursAvecRdv = {
@@ -239,22 +241,21 @@ class _PlanningScreenState extends State<PlanningScreen> {
                     ),
                   )
                 : duJour.isEmpty
-                    ? _JourneeLibre(onAjouter: _ajouterRdv)
-                    : ListView(
-                        padding: const EdgeInsets.only(top: 12, bottom: 110),
-                        children: [
-                          for (final rdv in duJour)
-                            CardRdv(
-                              rdv: rdv,
-                              onConfirme: () =>
-                                  _changerStatut(rdv, StatutRdv.confirme),
-                              onAnnule: () =>
-                                  _changerStatut(rdv, StatutRdv.annule),
-                              onTermine: () =>
-                                  _changerStatut(rdv, StatutRdv.termine),
-                            ),
-                        ],
-                      ),
+                ? _JourneeLibre(onAjouter: _ajouterRdv)
+                : ListView(
+                    padding: const EdgeInsets.only(top: 12, bottom: 110),
+                    children: [
+                      for (final rdv in duJour)
+                        CardRdv(
+                          rdv: rdv,
+                          onConfirme: () =>
+                              _changerStatut(rdv, StatutRdv.confirme),
+                          onAnnule: () => _changerStatut(rdv, StatutRdv.annule),
+                          onTermine: () =>
+                              _changerStatut(rdv, StatutRdv.termine),
+                        ),
+                    ],
+                  ),
           ),
         ],
       ),
@@ -284,9 +285,11 @@ class _Entete extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final haut = MediaQuery.of(context).padding.top;
-    final euros =
-        NumberFormat.currency(locale: 'fr_FR', symbol: '€', decimalDigits: 2)
-            .format(ca);
+    final euros = NumberFormat.currency(
+      locale: 'fr_FR',
+      symbol: '€',
+      decimalDigits: 2,
+    ).format(ca);
 
     return Container(
       width: double.infinity,
@@ -303,7 +306,7 @@ class _Entete extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
-              color: AppColors.gold,
+              color: AppColors.accent,
               fontSize: 12,
               letterSpacing: 2.4,
               fontWeight: FontWeight.w700,
@@ -312,9 +315,7 @@ class _Entete extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             _titre,
-            style: Theme.of(context)
-                .textTheme
-                .headlineMedium!
+            style: Theme.of(context).textTheme.headlineMedium!
                 .copyWith(color: Colors.white),
           ),
           const SizedBox(height: 16),
@@ -352,7 +353,7 @@ class _Pastille extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icone, size: 16, color: AppColors.gold),
+          Icon(icone, size: 16, color: AppColors.accent),
           const SizedBox(width: 6),
           Text(
             texte,
@@ -386,15 +387,20 @@ class _JourneeLibre extends StatelessWidget {
               width: 84,
               height: 84,
               decoration: const BoxDecoration(
-                color: AppColors.goldSoft,
+                color: AppColors.secondary,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.content_cut,
-                  size: 36, color: AppColors.goldDark),
+              child: const Icon(
+                Icons.content_cut,
+                size: 36,
+                color: AppColors.primary,
+              ),
             ),
             const SizedBox(height: 18),
-            Text('Journée libre',
-                style: Theme.of(context).textTheme.titleLarge),
+            Text(
+              'Journée libre',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
             const SizedBox(height: 6),
             const Text(
               'Aucun rendez-vous ce jour-là.',
@@ -405,7 +411,7 @@ class _JourneeLibre extends StatelessWidget {
               onPressed: onAjouter,
               icon: const Icon(Icons.add),
               label: const Text('Ajouter un rendez-vous'),
-              style: TextButton.styleFrom(foregroundColor: AppColors.goldDark),
+              style: TextButton.styleFrom(foregroundColor: AppColors.primary),
             ),
           ],
         ),

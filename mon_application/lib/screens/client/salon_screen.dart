@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+
 import '../../data/horaires.dart';
 import '../../models/prestation.dart';
 import '../../models/rendez_vous.dart';
@@ -39,8 +40,7 @@ class _SalonScreenState extends State<SalonScreen> {
   }
 
   void _message(String texte) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(texte)));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(texte)));
   }
 
   String _texteErreur(Object e, String parDefaut) =>
@@ -114,7 +114,9 @@ class _SalonScreenState extends State<SalonScreen> {
     } catch (e) {
       debugPrint('Erreur envoi demande : $e');
       if (mounted) {
-        _message(_texteErreur(e, 'Impossible d\'envoyer la demande. Réessaie.'));
+        _message(
+          _texteErreur(e, 'Impossible d\'envoyer la demande. Réessaie.'),
+        );
       }
     }
   }
@@ -140,8 +142,7 @@ class _SalonScreenState extends State<SalonScreen> {
             padding: EdgeInsets.fromLTRB(20, haut + 12, 12, 26),
             decoration: const BoxDecoration(
               gradient: AppColors.enTete,
-              borderRadius:
-                  BorderRadius.vertical(bottom: Radius.circular(28)),
+              borderRadius: BorderRadius.vertical(bottom: Radius.circular(28)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -152,7 +153,7 @@ class _SalonScreenState extends State<SalonScreen> {
                       child: Text(
                         'BIENVENUE CHEZ',
                         style: TextStyle(
-                          color: AppColors.gold,
+                          color: AppColors.accent,
                           fontSize: 12,
                           letterSpacing: 2.4,
                           fontWeight: FontWeight.w700,
@@ -161,15 +162,16 @@ class _SalonScreenState extends State<SalonScreen> {
                     ),
                     IconButton(
                       tooltip: 'Changer de salon',
-                      icon: const Icon(Icons.storefront_outlined,
-                          color: Colors.white),
+                      icon: const Icon(
+                        Icons.storefront_outlined,
+                        color: Colors.white,
+                      ),
                       onPressed: widget.onChangerSalon,
                     ),
                     IconButton(
                       tooltip: 'Changer de mode',
                       icon: const Icon(Icons.swap_horiz, color: Colors.white),
-                      onPressed: () =>
-                          Navigator.of(context).pushAndRemoveUntil(
+                      onPressed: () => Navigator.of(context).pushAndRemoveUntil(
                         MaterialPageRoute(
                           builder: (_) => const AccueilScreen(),
                         ),
@@ -180,15 +182,13 @@ class _SalonScreenState extends State<SalonScreen> {
                 ),
                 Text(
                   salon.nom,
-                  style: Theme.of(context)
-                      .textTheme
-                      .headlineLarge!
+                  style: Theme.of(context).textTheme.headlineLarge!
                       .copyWith(color: Colors.white),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   salon.adresse,
-                  style: const TextStyle(color: AppColors.gold, fontSize: 15),
+                  style: const TextStyle(color: AppColors.accent, fontSize: 15),
                 ),
                 const SizedBox(height: 16),
                 Wrap(
@@ -233,10 +233,7 @@ class _SalonScreenState extends State<SalonScreen> {
             Column(
               children: [
                 Text(_erreur!),
-                TextButton(
-                  onPressed: _charger,
-                  child: const Text('Réessayer'),
-                ),
+                TextButton(onPressed: _charger, child: const Text('Réessayer')),
               ],
             )
           else if (_prestations.isEmpty)
@@ -273,7 +270,7 @@ class _PastilleEntete extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icone, size: 16, color: AppColors.gold),
+          Icon(icone, size: 16, color: AppColors.accent),
           const SizedBox(width: 6),
           Text(
             texte,
@@ -309,11 +306,13 @@ class _CartePrestation extends StatelessWidget {
                   width: 46,
                   height: 46,
                   decoration: BoxDecoration(
-                    color: AppColors.goldSoft,
+                    color: AppColors.secondary,
                     borderRadius: BorderRadius.circular(14),
                   ),
-                  child: const Icon(Icons.content_cut,
-                      color: AppColors.goldDark),
+                  child: const Icon(
+                    Icons.content_cut,
+                    color: AppColors.primary,
+                  ),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -354,7 +353,7 @@ class _CartePrestation extends StatelessWidget {
                   style: const TextStyle(
                     fontWeight: FontWeight.w700,
                     fontSize: 16,
-                    color: AppColors.goldDark,
+                    color: AppColors.primary,
                   ),
                 ),
               ],

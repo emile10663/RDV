@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+
 import '../models/rendez_vous.dart';
 import '../screens/planning/rdv_detail_screen.dart';
 import '../theme/app_colors.dart';
@@ -111,7 +112,9 @@ class CardRdv extends StatelessWidget {
 
                   Padding(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 14),
+                      horizontal: 14,
+                      vertical: 14,
+                    ),
                     child: Container(width: 1, color: AppColors.border),
                   ),
 
@@ -131,8 +134,9 @@ class CardRdv extends StatelessWidget {
                               color: annule
                                   ? AppColors.onSurfaceVariant
                                   : AppColors.onSurface,
-                              decoration:
-                                  annule ? TextDecoration.lineThrough : null,
+                              decoration: annule
+                                  ? TextDecoration.lineThrough
+                                  : null,
                             ),
                           ),
                           const SizedBox(height: 3),
@@ -147,7 +151,9 @@ class CardRdv extends StatelessWidget {
                           const SizedBox(height: 8),
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 4),
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
                             decoration: BoxDecoration(
                               color: couleur.withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(20),
@@ -179,14 +185,16 @@ class CardRdv extends StatelessWidget {
                             '$prix €',
                             style: textTheme.titleMedium!.copyWith(
                               fontWeight: FontWeight.w700,
-                              color: AppColors.goldDark,
+                              color: AppColors.primary,
                             ),
                           ),
                         ),
                         if (_modifiable)
                           PopupMenuButton<String>(
-                            icon: const Icon(Icons.more_horiz,
-                                color: AppColors.onSurfaceVariant),
+                            icon: const Icon(
+                              Icons.more_horiz,
+                              color: AppColors.onSurfaceVariant,
+                            ),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(14),
                             ),

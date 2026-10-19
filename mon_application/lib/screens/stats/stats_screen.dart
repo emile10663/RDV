@@ -1,6 +1,8 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+
 import '../../models/rendez_vous.dart';
 import '../../services/rdv_service.dart';
 import '../../services/salon_service.dart';
@@ -96,9 +98,11 @@ class _StatsScreenState extends State<StatsScreen> {
   double _somme(Iterable<RendezVous> rdvs) =>
       rdvs.fold(0.0, (total, r) => total + r.prestation.prix);
 
-  String _euros(double montant) =>
-      NumberFormat.currency(locale: 'fr_FR', symbol: '€', decimalDigits: 2)
-          .format(montant);
+  String _euros(double montant) => NumberFormat.currency(
+    locale: 'fr_FR',
+    symbol: '€',
+    decimalDigits: 2,
+  ).format(montant);
 
   @override
   Widget build(BuildContext context) {
@@ -133,8 +137,11 @@ class _StatsScreenState extends State<StatsScreen> {
 
     // CA des 7 derniers jours (le dernier = aujourd'hui)
     final jours = List.generate(7, (i) {
-      final d = DateTime(aujourdhui.year, aujourdhui.month,
-          aujourdhui.day - (6 - i));
+      final d = DateTime(
+        aujourdhui.year,
+        aujourdhui.month,
+        aujourdhui.day - (6 - i),
+      );
       final ca = _somme(_actifs.where((r) => _memeJour(r.dateHeure, d)));
       return (jour: d, ca: ca);
     });
@@ -145,8 +152,10 @@ class _StatsScreenState extends State<StatsScreen> {
       body: ListView(
         padding: EdgeInsets.fromLTRB(16, haut + 16, 16, 24),
         children: [
-          Text('Statistiques',
-              style: Theme.of(context).textTheme.headlineMedium),
+          Text(
+            'Statistiques',
+            style: Theme.of(context).textTheme.headlineMedium,
+          ),
           const SizedBox(height: 16),
 
           // ─── Carte principale : CA du jour ───
@@ -166,16 +175,17 @@ class _StatsScreenState extends State<StatsScreen> {
                 const SizedBox(height: 8),
                 Text(
                   _euros(_somme(_actifsAujourdhui)),
-                  style: Theme.of(context).textTheme.headlineLarge!.copyWith(
-                        color: AppColors.gold,
-                        fontSize: 34,
-                      ),
+                  style: Theme.of(context).textTheme.headlineLarge!
+                      .copyWith(color: AppColors.accent, fontSize: 34),
                 ),
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    const Icon(Icons.event_available,
-                        size: 18, color: Colors.white70),
+                    const Icon(
+                      Icons.event_available,
+                      size: 18,
+                      color: Colors.white70,
+                    ),
                     const SizedBox(width: 8),
                     Text(
                       "$nbAujourdhui rendez-vous aujourd'hui",
@@ -211,8 +221,10 @@ class _StatsScreenState extends State<StatsScreen> {
           const SizedBox(height: 24),
 
           // ─── Graphique 7 jours ───
-          Text('7 derniers jours',
-              style: Theme.of(context).textTheme.titleMedium),
+          Text(
+            '7 derniers jours',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
           const SizedBox(height: 12),
           Card(
             child: Padding(
@@ -227,9 +239,10 @@ class _StatsScreenState extends State<StatsScreen> {
                         child: _Barre(
                           ca: jours[i].ca,
                           ratio: jours[i].ca / maxCa,
-                          lettre: DateFormat('E', 'fr_FR')
-                              .format(jours[i].jour)[0]
-                              .toUpperCase(),
+                          lettre: DateFormat(
+                            'E',
+                            'fr_FR',
+                          ).format(jours[i].jour)[0].toUpperCase(),
                           aujourdhui: i == jours.length - 1,
                         ),
                       ),
@@ -281,7 +294,7 @@ class _Barre extends StatelessWidget {
           width: 22,
           height: 4 + ratio * 90,
           decoration: BoxDecoration(
-            color: aujourdhui ? AppColors.gold : AppColors.primary,
+            color: aujourdhui ? AppColors.accent : AppColors.primary,
             borderRadius: BorderRadius.circular(8),
           ),
         ),
@@ -291,7 +304,7 @@ class _Barre extends StatelessWidget {
           style: TextStyle(
             fontSize: 12,
             fontWeight: aujourdhui ? FontWeight.w700 : FontWeight.w500,
-            color: aujourdhui ? AppColors.goldDark : AppColors.onSurfaceVariant,
+            color: aujourdhui ? AppColors.primary : AppColors.onSurfaceVariant,
           ),
         ),
       ],
@@ -323,10 +336,10 @@ class _MiniStat extends StatelessWidget {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: AppColors.goldSoft,
+                color: AppColors.secondary,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(icone, size: 20, color: AppColors.goldDark),
+              child: Icon(icone, size: 20, color: AppColors.primary),
             ),
             const SizedBox(height: 12),
             Text(

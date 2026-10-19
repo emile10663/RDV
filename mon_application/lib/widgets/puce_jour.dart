@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+
 import '../theme/app_colors.dart';
 
 /// 📆 Petite pastille verticale : "jeu." + "1" (+ point si des RDV ce jour-là)
@@ -23,8 +24,10 @@ class PuceJour extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final jourSemaine =
-        DateFormat('E', 'fr_FR').format(jour).replaceAll('.', '');
+    final jourSemaine = DateFormat(
+      'E',
+      'fr_FR',
+    ).format(jour).replaceAll('.', '');
     final texte = selected ? Colors.white : AppColors.onSurface;
     final discret = selected ? Colors.white70 : AppColors.onSurfaceVariant;
 
@@ -62,7 +65,7 @@ class PuceJour extends StatelessWidget {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: pastille
-                    ? (selected ? AppColors.gold : AppColors.goldDark)
+                    ? (selected ? AppColors.accent : AppColors.primary)
                     : Colors.transparent,
               ),
             ),

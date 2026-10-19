@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../models/salon.dart';
 import '../../services/salon_service.dart';
 import '../../theme/app_colors.dart';
@@ -36,8 +37,7 @@ class _ChoixSalonScreenState extends State<ChoixSalonScreen> {
             padding: EdgeInsets.fromLTRB(8, haut + 8, 20, 26),
             decoration: const BoxDecoration(
               gradient: AppColors.enTete,
-              borderRadius:
-                  BorderRadius.vertical(bottom: Radius.circular(28)),
+              borderRadius: BorderRadius.vertical(bottom: Radius.circular(28)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -54,9 +54,7 @@ class _ChoixSalonScreenState extends State<ChoixSalonScreen> {
                   padding: const EdgeInsets.only(left: 12),
                   child: Text(
                     'Choisis ton salon',
-                    style: Theme.of(context)
-                        .textTheme
-                        .headlineMedium!
+                    style: Theme.of(context).textTheme.headlineMedium!
                         .copyWith(color: Colors.white),
                   ),
                 ),
@@ -104,21 +102,26 @@ class _ChoixSalonScreenState extends State<ChoixSalonScreen> {
                           child: ListTile(
                             onTap: () => widget.onChoisi(s),
                             contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 8),
+                              horizontal: 16,
+                              vertical: 8,
+                            ),
                             leading: Container(
                               width: 46,
                               height: 46,
                               decoration: BoxDecoration(
-                                color: AppColors.goldSoft,
+                                color: AppColors.secondary,
                                 borderRadius: BorderRadius.circular(14),
                               ),
-                              child: const Icon(Icons.content_cut,
-                                  color: AppColors.goldDark),
+                              child: const Icon(
+                                Icons.content_cut,
+                                color: AppColors.primary,
+                              ),
                             ),
                             title: Text(
                               s.nom,
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.w700),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
                             subtitle: Text(s.adresse),
                             trailing: const Icon(Icons.chevron_right),
