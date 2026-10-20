@@ -9,6 +9,8 @@ import '../../services/auth_service.dart';
 import '../../services/prestation_service.dart';
 import '../../services/rdv_service.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/logo_salon.dart';
+import '../../utils/prix.dart';
 import '../../widgets/horaires_semaine.dart';
 import '../accueil_screen.dart';
 import '../avis/avis_screen.dart';
@@ -187,16 +189,39 @@ class _SalonScreenState extends State<SalonScreen> {
                     ),
                   ],
                 ),
-                Text(
-                  salon.nom,
-                  style: Theme.of(context).textTheme.headlineLarge!
-                      .copyWith(color: Colors.white),
+                Row(
+                  children: [
+                    if (salon.logo != null) ...[
+                      LogoSalon(
+                        logo: salon.logo,
+                        taille: 56,
+                        fond: Colors.white24,
+                        couleurIcone: AppColors.accent,
+                        bordure: AppColors.accent,
+                      ),
+                      const SizedBox(width: 14),
+                    ],
+                    Expanded(
+                      child: Text(
+                        salon.nom,
+                        style: Theme.of(context).textTheme.headlineLarge!
+                            .copyWith(color: Colors.white),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 4),
                 Text(
                   salon.adresse,
                   style: const TextStyle(color: AppColors.accent, fontSize: 15),
                 ),
+                if (salon.description.trim().isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    salon.description,
+                    style: const TextStyle(color: Colors.white70, fontSize: 14),
+                  ),
+                ],
                 const SizedBox(height: 16),
                 Wrap(
                   spacing: 10,
@@ -309,7 +334,7 @@ class _CartePrestation extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final prix = prestation.prix.toStringAsFixed(2).replaceAll('.', ',');
+    final prix = formatPrix(prestation.prix);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
@@ -368,7 +393,7 @@ class _CartePrestation extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  '$prix €',
+                  prix,
                   style: const TextStyle(
                     fontWeight: FontWeight.w700,
                     fontSize: 16,

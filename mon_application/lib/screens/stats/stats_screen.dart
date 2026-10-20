@@ -7,6 +7,7 @@ import '../../models/rendez_vous.dart';
 import '../../services/rdv_service.dart';
 import '../../services/salon_service.dart';
 import '../../theme/app_colors.dart';
+import '../../utils/prix.dart';
 
 /// 📊 Statistiques du salon
 class StatsScreen extends StatefulWidget {
@@ -98,11 +99,7 @@ class _StatsScreenState extends State<StatsScreen> {
   double _somme(Iterable<RendezVous> rdvs) =>
       rdvs.fold(0.0, (total, r) => total + r.prestation.prix);
 
-  String _euros(double montant) => NumberFormat.currency(
-    locale: 'fr_FR',
-    symbol: '€',
-    decimalDigits: 2,
-  ).format(montant);
+  String _euros(double montant) => formatPrix(montant);
 
   @override
   Widget build(BuildContext context) {
@@ -280,7 +277,7 @@ class _Barre extends StatelessWidget {
           height: 14,
           child: ca > 0
               ? Text(
-                  ca.toStringAsFixed(0),
+                  formatPrixCourt(ca),
                   style: const TextStyle(
                     fontSize: 10,
                     color: AppColors.onSurfaceVariant,

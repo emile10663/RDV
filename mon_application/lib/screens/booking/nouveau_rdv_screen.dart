@@ -7,6 +7,7 @@ import '../../models/horaires_salon.dart';
 import '../../models/prestation.dart';
 import '../../models/rendez_vous.dart';
 import '../../theme/app_colors.dart';
+import '../../utils/prix.dart';
 import '../../widgets/puce_jour.dart';
 
 /// ➕ Écran de création d'un rendez-vous
@@ -317,7 +318,7 @@ class _NouveauRdvScreenState extends State<NouveauRdvScreen> {
                     padding: const EdgeInsets.only(bottom: 10),
                     child: Text(
                       '${DateFormat('EEEE d MMMM', 'fr_FR').format(_jour)} à ${_heureTexte(heure)}'
-                      ' · ${prestation.prix.toStringAsFixed(2).replaceAll('.', ',')} €',
+                      ' · ${formatPrix(prestation.prix)}',
                       textAlign: TextAlign.center,
                       style: const TextStyle(
                         fontWeight: FontWeight.w600,
@@ -403,7 +404,7 @@ class _TuilePrestation extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final prix = prestation.prix.toStringAsFixed(2).replaceAll('.', ',');
+    final prix = formatPrix(prestation.prix);
 
     return GestureDetector(
       onTap: onTap,
@@ -469,7 +470,7 @@ class _TuilePrestation extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  '$prix €',
+                  prix,
                   style: const TextStyle(
                     fontWeight: FontWeight.w700,
                     fontSize: 16,

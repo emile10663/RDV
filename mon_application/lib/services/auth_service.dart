@@ -22,6 +22,17 @@ class AuthService {
 
   static Future<void> deconnecter() => _auth.signOut();
 
+  /// Mot de passe oublié : envoie un e-mail avec un lien pour en choisir un nouveau.
+  /// Si aucun compte n'existe avec cet e-mail, on ne le révèle pas (même réponse).
+  static Future<void> envoyerReinitialisation(String email) async {
+    try {
+      await _auth.sendPasswordResetEmail(email: email);
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'user-not-found') return;
+      rethrow;
+    }
+  }
+
   /// Client : s'assure qu'une session existe (anonyme au besoin)
   /// et renvoie son identifiant
   static Future<String> assurerSessionClient() async {
@@ -45,6 +56,8 @@ class AuthService {
           return 'Un compte existe déjà avec cet e-mail.';
         case 'weak-password':
           return 'Mot de passe trop faible (6 caractères minimum).';
+        case 'too-many-requests':
+          return 'Trop de tentatives. Réessaie dans quelques minutes.';
         case 'network-request-failed':
           return 'Pas de connexion internet.';
         case 'operation-not-allowed':

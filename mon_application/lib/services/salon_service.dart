@@ -38,6 +38,25 @@ class SalonService {
     return resultat.docs.map((d) => Salon.fromJson(d.id, d.data())).toList();
   }
 
+  /// Modifie les informations du salon (nom, adresse, téléphone, description, logo)
+  static Future<void> mettreAJourInfos(
+    String salonId, {
+    required String nom,
+    required String adresse,
+    required String telephone,
+    required String description,
+    required String? logo,
+  }) => _salons
+      .doc(salonId)
+      .update({
+        'nom': nom,
+        'adresse': adresse,
+        'telephone': telephone,
+        'description': description,
+        'logo': logo ?? FieldValue.delete(),
+      })
+      .timeout(const Duration(seconds: 15));
+
   /// Enregistre les horaires et les jours de congé du salon
   static Future<void> mettreAJourHoraires(
     String salonId,

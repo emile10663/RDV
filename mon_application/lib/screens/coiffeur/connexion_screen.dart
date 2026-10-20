@@ -55,6 +55,15 @@ class _ConnexionScreenState extends State<ConnexionScreen> {
     }
   }
 
+  /// Ouvre la fenêtre « Mot de passe oublié ? »
+  Future<void> _motDePasseOublie() {
+    return showDialog<void>(
+      context: context,
+      builder: (_) =>
+          _DialogReinitialisation(emailInitial: _email.text.trim()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -127,6 +136,14 @@ class _ConnexionScreenState extends State<ConnexionScreen> {
                             ),
                           ),
                         ),
+                        if (!_inscription)
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton(
+                              onPressed: _chargement ? null : _motDePasseOublie,
+                              child: const Text('Mot de passe oublié ?'),
+                            ),
+                          ),
                         if (_erreur != null) ...[
                           const SizedBox(height: 12),
                           Text(
@@ -184,6 +201,126 @@ class _ConnexionScreenState extends State<ConnexionScreen> {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// 📧 Fenêtre « Mot de passe oublié » : on entre son e-mail et on reçoit un lien
+class _DialogReinitialisation extends StatefulWidget {
+  final String emailInitial;
+
+  const _DialogReinitialisation({required this.emailInitial});
+
+  @override
+  State<_DialogReinitialisation> createState() =>
+      _DialogReinitialisationState();
+}
+
+class _DialogReinitialisationState extends State<_DialogReinitialisation> {
+  late final TextEditingController _email = TextEditingController(
+    text: widget.emailInitial,
+  );
+  bool _envoi = false;
+  bool _envoye = false;
+  String? _erreur;
+
+  @override
+  void dispose() {
+    _email.dispose();
+    super.dispose();
+  }
+
+  Future<void> _envoyer() async {
+    final email = _email.text.trim();
+    if (email.isEmpty || !email.contains('@')) {
+      setState(() => _erreur = 'Entre une adresse e-mail valide.');
+      return;
+    }
+
+    setState(() {
+      _envoi = true;
+      _erreur = null;
+    });
+
+    try {
+      await AuthService.envoyerReinitialisation(email);
+      if (!mounted) return;
+      setState(() {
+        _envoi = false;
+        _envoye = true;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _envoi = false;
+        _erreur = AuthService.messageErreur(e);
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_envoye) {
+      return AlertDialog(
+        title: const Text('Vérifie ta boîte mail'),
+        content: Text(
+          'Si un compte existe avec ${_email.text.trim()}, un message vient '
+          'd\'être envoyé avec un lien pour choisir un nouveau mot de passe.\n\n'
+          'Pense à regarder dans les courriers indésirables (spam).',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Fermer'),
+          ),
+        ],
+      );
+    }
+
+    return AlertDialog(
+      title: const Text('Mot de passe oublié ?'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Entre l\'e-mail de ton compte. Tu recevras un lien pour '
+            'choisir un nouveau mot de passe.',
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _email,
+            keyboardType: TextInputType.emailAddress,
+            autofocus: true,
+            onSubmitted: (_) => _envoi ? null : _envoyer(),
+            decoration: const InputDecoration(
+              labelText: 'E-mail',
+              prefixIcon: Icon(Icons.mail_outline),
+              border: OutlineInputBorder(),
+            ),
+          ),
+          if (_erreur != null) ...[
+            const SizedBox(height: 10),
+            Text(_erreur!, style: const TextStyle(color: Colors.redAccent)),
+          ],
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: _envoi ? null : () => Navigator.of(context).pop(),
+          child: const Text('Annuler'),
+        ),
+        FilledButton(
+          onPressed: _envoi ? null : _envoyer,
+          child: _envoi
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Envoyer le lien'),
+        ),
+      ],
     );
   }
 }

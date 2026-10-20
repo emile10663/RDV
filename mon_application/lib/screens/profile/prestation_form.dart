@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../models/prestation.dart';
 
 /// Ouvre le formulaire d'ajout / de modification d'une prestation.
@@ -39,7 +40,7 @@ class _FormulairePrestationState extends State<_FormulairePrestation> {
     _description = TextEditingController(text: p?.description ?? '');
     _duree = TextEditingController(text: p == null ? '30' : '${p.duree.inMinutes}');
     _prix = TextEditingController(
-      text: p == null ? '' : p.prix.toStringAsFixed(2).replaceAll('.', ','),
+      text: p == null ? '' : p.prix.round().toString(),
     );
   }
 
@@ -64,8 +65,8 @@ class _FormulairePrestationState extends State<_FormulairePrestation> {
   }
 
   String? _validerPrix(String? v) {
-    final prix = double.tryParse((v ?? '').trim().replaceAll(',', '.'));
-    if (prix == null || prix < 0) return 'Prix invalide';
+    final prix = int.tryParse((v ?? '').trim());
+    if (prix == null || prix < 0 || prix > 10000000) return 'Prix invalide';
     return null;
   }
 
@@ -78,7 +79,7 @@ class _FormulairePrestationState extends State<_FormulairePrestation> {
         nom: _nom.text.trim(),
         description: _description.text.trim(),
         duree: Duration(minutes: int.parse(_duree.text.trim())),
-        prix: double.parse(_prix.text.trim().replaceAll(',', '.')),
+        prix: int.parse(_prix.text.trim()).toDouble(),
         imageUrl: widget.existante?.imageUrl,
       ),
     );
@@ -133,9 +134,9 @@ class _FormulairePrestationState extends State<_FormulairePrestation> {
                   Expanded(
                     child: TextFormField(
                       controller: _prix,
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: true),
-                      decoration: const InputDecoration(labelText: 'Prix (€)'),
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      decoration: const InputDecoration(labelText: 'Prix (FCFA)'),
                       validator: _validerPrix,
                     ),
                   ),

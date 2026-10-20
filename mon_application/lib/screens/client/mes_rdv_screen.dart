@@ -8,6 +8,7 @@ import '../../services/rdv_service.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/statut_rdv_style.dart';
 import '../avis/donner_avis_sheet.dart';
+import '../../utils/prix.dart';
 
 /// 📋 Les rendez-vous pris par le client (avec sa session actuelle)
 class MesRdvScreen extends StatefulWidget {
@@ -240,7 +241,7 @@ class _CarteMonRdv extends StatelessWidget {
     final couleur = rdv.statut.couleur;
     final jour = DateFormat('EEEE d MMMM', 'fr_FR').format(rdv.dateHeure);
     final jourMaj = jour[0].toUpperCase() + jour.substring(1);
-    final prix = rdv.prestation.prix.toStringAsFixed(2).replaceAll('.', ',');
+    final prix = formatPrix(rdv.prestation.prix);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -280,7 +281,7 @@ class _CarteMonRdv extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            '$prix €',
+                            prix,
                             style: const TextStyle(
                               fontWeight: FontWeight.w700,
                               color: AppColors.primary,

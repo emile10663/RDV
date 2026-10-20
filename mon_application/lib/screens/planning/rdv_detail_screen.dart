@@ -4,6 +4,7 @@ import '../../models/client.dart';
 import '../../models/rendez_vous.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/statut_rdv_style.dart';
+import '../../utils/prix.dart';
 
 /// 📄 Détail d'un rendez-vous
 class RdvDetailScreen extends StatelessWidget {
@@ -22,7 +23,7 @@ class RdvDetailScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final tel = rdv.client.telephone;
     final email = rdv.client.email;
-    final prix = rdv.prestation.prix.toStringAsFixed(2).replaceAll('.', ',');
+    final prix = formatPrix(rdv.prestation.prix);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Détail du rendez-vous')),
@@ -104,7 +105,7 @@ class RdvDetailScreen extends StatelessWidget {
                   _Ligne(
                     icone: Icons.payments_outlined,
                     titre: 'Prix',
-                    texte: '$prix €',
+                    texte: prix,
                   ),
                   if (tel.isNotEmpty)
                     _Ligne(

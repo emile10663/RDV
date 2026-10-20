@@ -7,9 +7,13 @@ import '../../services/auth_service.dart';
 import '../../services/prestation_service.dart';
 import '../../services/salon_service.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/logo_salon.dart';
+import '../../utils/prix.dart';
 import '../accueil_screen.dart';
 import '../avis/avis_screen.dart';
+import '../client/clients_screen.dart';
 import 'horaires_screen.dart';
+import 'infos_salon_screen.dart';
 import 'lien_reservation.dart';
 import 'prestation_form.dart';
 
@@ -68,6 +72,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _salon = salon.copyWith(horaires: nouveaux);
     });
     _message('Horaires enregistrés.');
+  }
+
+  Future<void> _modifierInfos(Salon salon) async {
+    final modifie = await Navigator.of(context).push<Salon>(
+      MaterialPageRoute(builder: (_) => InfosSalonScreen(salon: salon)),
+    );
+    if (modifie == null || !mounted) return;
+    setState(() {
+      _salon = modifie;
+    });
+    _message('Informations enregistrées.');
   }
 
   void _message(String texte) {
@@ -156,19 +171,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
         children: [
           // ─── Identité ───
           Center(
-            child: Container(
-              width: 96,
-              height: 96,
-              decoration: BoxDecoration(
-                gradient: AppColors.enTete,
-                shape: BoxShape.circle,
-                border: Border.all(color: AppColors.accent, width: 3),
-              ),
-              child: const Icon(
-                Icons.content_cut,
-                size: 40,
-                color: AppColors.accent,
-              ),
+            child: LogoSalon(
+              logo: salon?.logo,
+              taille: 96,
+              degrade: AppColors.enTete,
+              couleurIcone: AppColors.accent,
+              bordure: AppColors.accent,
+              largeurBordure: 3,
             ),
           ),
           const SizedBox(height: 16),
@@ -206,6 +215,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             const SizedBox(height: 10),
             CarteAvisSalon(salon: salon, estCoiffeur: true),
+            const SizedBox(height: 10),
+            Card(
+              child: ListTile(
+                leading: const Icon(
+                  Icons.people_outline,
+                  color: AppColors.primary,
+                ),
+                title: const Text('Mes clients'),
+                subtitle: const Text('Ceux qui ont pris rendez-vous chez vous'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => ClientsScreen(salon: salon),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Card(
+              child: ListTile(
+                leading: const Icon(
+                  Icons.storefront_outlined,
+                  color: AppColors.primary,
+                ),
+                title: const Text('Informations du salon'),
+                subtitle: const Text('Nom, adresse, téléphone, présentation'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => _modifierInfos(salon),
+              ),
+            ),
           ],
           const SizedBox(height: 28),
 
@@ -281,7 +320,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          '${p.prix.toStringAsFixed(2).replaceAll('.', ',')} €',
+                          formatPrix(p.prix),
                           style: const TextStyle(
                             fontWeight: FontWeight.w700,
                             color: AppColors.primary,

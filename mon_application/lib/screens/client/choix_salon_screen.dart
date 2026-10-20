@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../models/salon.dart';
 import '../../services/salon_service.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/logo_salon.dart';
 import '../accueil_screen.dart';
 
 /// 🔎 Le client choisit son salon (provisoire, avant le lien / QR code)
@@ -105,17 +106,12 @@ class _ChoixSalonScreenState extends State<ChoixSalonScreen> {
                               horizontal: 16,
                               vertical: 8,
                             ),
-                            leading: Container(
-                              width: 46,
-                              height: 46,
-                              decoration: BoxDecoration(
-                                color: AppColors.secondary,
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                              child: const Icon(
-                                Icons.content_cut,
-                                color: AppColors.primary,
-                              ),
+                            leading: LogoSalon(
+                              logo: s.logo,
+                              taille: 46,
+                              rond: false,
+                              fond: AppColors.secondary,
+                              couleurIcone: AppColors.primary,
                             ),
                             title: Text(
                               s.nom,

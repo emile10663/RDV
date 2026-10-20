@@ -5,7 +5,7 @@ class Prestation {
   final String nom;          // "Coupe homme"
   final String description;  // petit texte descriptif
   final Duration duree;      // combien de temps ça prend
-  final double prix;         // en euros
+  final double prix;         // en francs CFA (FCFA), sans centimes
   final String? imageUrl;    // photo (optionnelle → le "?" signifie nullable)
 
   const Prestation({

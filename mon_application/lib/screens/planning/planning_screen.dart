@@ -11,6 +11,7 @@ import '../../services/prestation_service.dart';
 import '../../services/rdv_service.dart';
 import '../../services/salon_service.dart';
 import '../../theme/app_colors.dart';
+import '../../utils/prix.dart';
 import '../../widgets/card_rdv.dart';
 import '../../widgets/puce_jour.dart';
 import '../booking/nouveau_rdv_screen.dart';
@@ -287,11 +288,7 @@ class _Entete extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final haut = MediaQuery.of(context).padding.top;
-    final euros = NumberFormat.currency(
-      locale: 'fr_FR',
-      symbol: '€',
-      decimalDigits: 2,
-    ).format(ca);
+    final euros = formatPrix(ca);
 
     return Container(
       width: double.infinity,

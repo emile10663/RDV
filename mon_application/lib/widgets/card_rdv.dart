@@ -5,6 +5,7 @@ import '../models/rendez_vous.dart';
 import '../screens/planning/rdv_detail_screen.dart';
 import '../theme/app_colors.dart';
 import 'statut_rdv_style.dart';
+import '../utils/prix.dart';
 
 /// 🗓️ Carte d'un rendez-vous : bandeau de couleur = statut
 class CardRdv extends StatelessWidget {
@@ -54,7 +55,7 @@ class CardRdv extends StatelessWidget {
     final couleur = rdv.statut.couleur;
     final annule = rdv.statut == StatutRdv.annule;
     final heureFin = DateFormat('HH:mm').format(rdv.fin);
-    final prix = rdv.prestation.prix.toStringAsFixed(2).replaceAll('.', ',');
+    final prix = formatPrix(rdv.prestation.prix);
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
@@ -182,7 +183,7 @@ class CardRdv extends StatelessWidget {
                         Padding(
                           padding: const EdgeInsets.only(right: 8, top: 2),
                           child: Text(
-                            '$prix €',
+                            prix,
                             style: textTheme.titleMedium!.copyWith(
                               fontWeight: FontWeight.w700,
                               color: AppColors.primary,
