@@ -8,7 +8,8 @@ class PuceJour extends StatelessWidget {
   final DateTime jour;
   final bool selected;
   final bool pastille;
-  final bool ferme; // salon fermé ce jour-là : pastille estompée
+  final bool ferme; // salon fermé ce jour-là : pastille estompée + « fermé »
+  final bool aujourdhui; // c'est le jour d'aujourd'hui : contour de couleur
   final VoidCallback onTap;
 
   const PuceJour({
@@ -18,6 +19,7 @@ class PuceJour extends StatelessWidget {
     required this.onTap,
     this.pastille = false,
     this.ferme = false,
+    this.aujourdhui = false,
   });
 
   /// Largeur + espace : utile pour positionner le défilement
@@ -34,7 +36,7 @@ class PuceJour extends StatelessWidget {
     final discret = selected ? Colors.white70 : AppColors.onSurfaceVariant;
 
     return Opacity(
-      opacity: ferme && !selected ? 0.4 : 1,
+      opacity: ferme && !selected ? 0.55 : 1,
       child: GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
@@ -46,13 +48,23 @@ class PuceJour extends StatelessWidget {
           color: selected ? AppColors.primary : AppColors.card,
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
-            color: selected ? AppColors.primary : AppColors.border,
+            color: selected
+                ? AppColors.primary
+                : (aujourdhui ? AppColors.accent : AppColors.border),
+            width: aujourdhui && !selected ? 1.8 : 1,
           ),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(jourSemaine, style: TextStyle(fontSize: 12, color: discret)),
+            Text(
+              jourSemaine,
+              style: TextStyle(
+                fontSize: 12,
+                color: discret,
+                fontWeight: aujourdhui ? FontWeight.w700 : FontWeight.w400,
+              ),
+            ),
             const SizedBox(height: 4),
             Text(
               '${jour.day}',
@@ -63,16 +75,19 @@ class PuceJour extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 6),
-            Container(
-              width: 6,
-              height: 6,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: pastille
-                    ? (selected ? AppColors.accent : AppColors.primary)
-                    : Colors.transparent,
+            if (ferme && !pastille)
+              Text('fermé', style: TextStyle(fontSize: 9, color: discret))
+            else
+              Container(
+                width: 6,
+                height: 6,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: pastille
+                      ? (selected ? AppColors.accent : AppColors.primary)
+                      : Colors.transparent,
+                ),
               ),
-            ),
           ],
         ),
       ),

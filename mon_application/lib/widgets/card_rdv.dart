@@ -25,6 +25,15 @@ class CardRdv extends StatelessWidget {
   bool get _modifiable =>
       rdv.statut != StatutRdv.termine && rdv.statut != StatutRdv.annule;
 
+  /// Boutons directement sur la carte : confirmer / refuser une demande,
+  /// ou marquer terminé un RDV confirmé dont l'heure est passée
+  bool get _actionsRapides =>
+      (rdv.statut == StatutRdv.enAttente &&
+          (onConfirme != null || onAnnule != null)) ||
+      (rdv.statut == StatutRdv.confirme &&
+          onTermine != null &&
+          rdv.fin.isBefore(DateTime.now()));
+
   Future<void> _confirmerAnnulation(BuildContext context) async {
     final confirme = await showDialog<bool>(
       context: context,
@@ -82,7 +91,10 @@ class CardRdv extends StatelessWidget {
                 ),
               );
             },
-            child: IntrinsicHeight(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+            IntrinsicHeight(
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -235,6 +247,48 @@ class CardRdv extends StatelessWidget {
                 ],
               ),
             ),
+            if (_actionsRapides)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+                child: rdv.statut == StatutRdv.enAttente
+                    ? Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () => _confirmerAnnulation(context),
+                              style: OutlinedButton.styleFrom(
+                                minimumSize: const Size(0, 40),
+                                foregroundColor: AppColors.error,
+                                side: const BorderSide(
+                                  color: AppColors.border,
+                                ),
+                              ),
+                              child: const Text('Refuser'),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: onConfirme,
+                              style: ElevatedButton.styleFrom(
+                                minimumSize: const Size(0, 40),
+                              ),
+                              child: const Text('Confirmer'),
+                            ),
+                          ),
+                        ],
+                      )
+                    : ElevatedButton.icon(
+                        onPressed: onTermine,
+                        style: ElevatedButton.styleFrom(
+                          minimumSize: const Size(double.infinity, 40),
+                        ),
+                        icon: const Icon(Icons.check, size: 18),
+                        label: const Text('Marquer terminé'),
+                      ),
+              ),
+          ],
+        ),
           ),
         ),
       ),

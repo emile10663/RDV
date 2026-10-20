@@ -13,6 +13,7 @@ import '../../services/salon_service.dart';
 import '../../theme/app_colors.dart';
 import '../../utils/prix.dart';
 import '../../widgets/card_rdv.dart';
+import '../../widgets/logo_salon.dart';
 import '../../widgets/puce_jour.dart';
 import '../booking/nouveau_rdv_screen.dart';
 
@@ -34,6 +35,7 @@ class _PlanningScreenState extends State<PlanningScreen> {
   StreamSubscription<List<RendezVous>>? _abonnement;
   late DateTime _jourChoisi;
   late final ScrollController _bandeau;
+  bool _annulesVisibles = false;
 
   static DateTime _jour(DateTime d) => DateTime(d.year, d.month, d.day);
 
@@ -51,6 +53,18 @@ class _PlanningScreenState extends State<PlanningScreen> {
     _abonnement?.cancel();
     _bandeau.dispose();
     super.dispose();
+  }
+
+  /// Revient sur aujourd'hui et fait défiler la bande des jours
+  void _allerAujourdhui() {
+    setState(() => _jourChoisi = _jour(DateTime.now()));
+    if (_bandeau.hasClients) {
+      _bandeau.animateTo(
+        _joursAvant * _pas,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    }
   }
 
   void _message(String texte) {
@@ -181,8 +195,32 @@ class _PlanningScreenState extends State<PlanningScreen> {
     final duJour =
         _rdvs.where((r) => _jour(r.dateHeure) == _jourChoisi).toList()
           ..sort((a, b) => a.dateHeure.compareTo(b.dateHeure));
-    final actifs = duJour.where((r) => r.statut != StatutRdv.annule);
+    final actifs = duJour.where((r) => r.statut != StatutRdv.annule).toList();
+    final annules = duJour.where((r) => r.statut == StatutRdv.annule).toList();
     final ca = actifs.fold<double>(0, (t, r) => t + r.prestation.prix);
+    final ferme = _salon?.horaires.estOuvert(_jourChoisi) == false;
+
+    // Le prochain rendez-vous à venir (tous jours confondus)
+    final maintenant = DateTime.now();
+    final aVenir = _rdvs
+        .where(
+          (r) =>
+              (r.statut == StatutRdv.confirme ||
+                  r.statut == StatutRdv.enAttente) &&
+              r.fin.isAfter(maintenant),
+        )
+        .toList()
+      ..sort((a, b) => a.dateHeure.compareTo(b.dateHeure));
+    String? prochain;
+    if (aVenir.isNotEmpty) {
+      final r = aVenir.first;
+      final quand = _jour(r.dateHeure) == aujourdhui
+          ? ''
+          : '${DateFormat('E', 'fr_FR').format(r.dateHeure).replaceAll('.', '')} ';
+      final prenom =
+          r.client.prenom.trim().isEmpty ? r.client.nom : r.client.prenom;
+      prochain = 'Prochain : $quand${r.heureFormatee} · $prenom';
+    }
     final joursAvecRdv = {
       for (final r in _rdvs)
         if (r.statut != StatutRdv.annule) _jour(r.dateHeure),
@@ -201,15 +239,40 @@ class _PlanningScreenState extends State<PlanningScreen> {
             jour: _jourChoisi,
             nbRdv: actifs.length,
             ca: ca,
+            logo: _salon?.logo,
+            prochain: prochain,
+          ),
+
+          // ─── Mois + retour à aujourd'hui ───
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 8, 0),
+            child: Row(
+              children: [
+                Text(
+                  () {
+                    final m = DateFormat('MMMM y', 'fr_FR').format(_jourChoisi);
+                    return m[0].toUpperCase() + m.substring(1);
+                  }(),
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const Spacer(),
+                if (_jourChoisi != aujourdhui)
+                  TextButton.icon(
+                    onPressed: _allerAujourdhui,
+                    icon: const Icon(Icons.today, size: 18),
+                    label: const Text('Aujourd\'hui'),
+                  ),
+              ],
+            ),
           ),
 
           // ─── Bande des jours ───
           SizedBox(
-            height: 88,
+            height: 82,
             child: ListView.builder(
               controller: _bandeau,
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.fromLTRB(16, 14, 6, 6),
+              padding: const EdgeInsets.fromLTRB(16, 8, 6, 6),
               itemCount: _joursAvant + 1 + _joursApres,
               itemBuilder: (context, i) {
                 final jour = DateTime(
@@ -222,6 +285,7 @@ class _PlanningScreenState extends State<PlanningScreen> {
                   selected: jour == _jourChoisi,
                   pastille: joursAvecRdv.contains(jour),
                   ferme: _salon?.horaires.estOuvert(jour) == false,
+                  aujourdhui: jour == aujourdhui,
                   onTap: () => setState(() => _jourChoisi = jour),
                 );
               },
@@ -244,11 +308,13 @@ class _PlanningScreenState extends State<PlanningScreen> {
                     ),
                   )
                 : duJour.isEmpty
-                ? _JourneeLibre(onAjouter: _ajouterRdv)
+                ? _JourneeLibre(ferme: ferme, onAjouter: _ajouterRdv)
                 : ListView(
                     padding: const EdgeInsets.only(top: 12, bottom: 110),
                     children: [
-                      for (final rdv in duJour)
+                      if (actifs.isEmpty)
+                        _CarteJourLibre(ferme: ferme, onAjouter: _ajouterRdv),
+                      for (final rdv in actifs)
                         CardRdv(
                           rdv: rdv,
                           onConfirme: () =>
@@ -257,6 +323,18 @@ class _PlanningScreenState extends State<PlanningScreen> {
                           onTermine: () =>
                               _changerStatut(rdv, StatutRdv.termine),
                         ),
+                      // Les rendez-vous annulés sont repliés en bas
+                      if (annules.isNotEmpty) ...[
+                        _EnteteAnnules(
+                          nombre: annules.length,
+                          ouvert: _annulesVisibles,
+                          onTap: () => setState(
+                            () => _annulesVisibles = !_annulesVisibles,
+                          ),
+                        ),
+                        if (_annulesVisibles)
+                          for (final rdv in annules) CardRdv(rdv: rdv),
+                      ],
                     ],
                   ),
           ),
@@ -272,12 +350,16 @@ class _Entete extends StatelessWidget {
   final DateTime jour;
   final int nbRdv;
   final double ca;
+  final String? logo;
+  final String? prochain;
 
   const _Entete({
     required this.nomSalon,
     required this.jour,
     required this.nbRdv,
     required this.ca,
+    this.logo,
+    this.prochain,
   });
 
   String get _titre {
@@ -300,22 +382,44 @@ class _Entete extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            nomSalon.toUpperCase(),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: AppColors.accent,
-              fontSize: 12,
-              letterSpacing: 2.4,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            _titre,
-            style: Theme.of(context).textTheme.headlineMedium!
-                .copyWith(color: Colors.white),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      nomSalon.toUpperCase(),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: AppColors.accent,
+                        fontSize: 12,
+                        letterSpacing: 2.4,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _titre,
+                      style: Theme.of(context).textTheme.headlineMedium!
+                          .copyWith(color: Colors.white),
+                    ),
+                  ],
+                ),
+              ),
+              if (logo != null) ...[
+                const SizedBox(width: 12),
+                LogoSalon(
+                  logo: logo,
+                  taille: 48,
+                  fond: Colors.white24,
+                  couleurIcone: AppColors.accent,
+                  bordure: AppColors.accent,
+                ),
+              ],
+            ],
           ),
           const SizedBox(height: 16),
           Wrap(
@@ -327,6 +431,8 @@ class _Entete extends StatelessWidget {
                 texte: '$nbRdv rendez-vous',
               ),
               _Pastille(icone: Icons.payments_outlined, texte: euros),
+              if (prochain != null)
+                _Pastille(icone: Icons.schedule, texte: prochain!),
             ],
           ),
         ],
@@ -370,9 +476,10 @@ class _Pastille extends StatelessWidget {
 
 /// 🌿 État vide : aucun rendez-vous ce jour-là
 class _JourneeLibre extends StatelessWidget {
+  final bool ferme;
   final VoidCallback onAjouter;
 
-  const _JourneeLibre({required this.onAjouter});
+  const _JourneeLibre({required this.ferme, required this.onAjouter});
 
   @override
   Widget build(BuildContext context) {
@@ -389,28 +496,114 @@ class _JourneeLibre extends StatelessWidget {
                 color: AppColors.secondary,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
-                Icons.content_cut,
+              child: Icon(
+                ferme ? Icons.event_busy : Icons.content_cut,
                 size: 36,
                 color: AppColors.primary,
               ),
             ),
             const SizedBox(height: 18),
             Text(
-              'Journée libre',
+              ferme ? 'Salon fermé' : 'Journée libre',
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 6),
-            const Text(
-              'Aucun rendez-vous ce jour-là.',
-              style: TextStyle(color: AppColors.onSurfaceVariant),
+            Text(
+              ferme
+                  ? 'Le salon est fermé ce jour-là.'
+                  : 'Aucun rendez-vous ce jour-là.\n'
+                        'Appuie sur « Nouveau RDV » pour en ajouter un.',
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: AppColors.onSurfaceVariant),
             ),
-            const SizedBox(height: 16),
-            TextButton.icon(
-              onPressed: onAjouter,
-              icon: const Icon(Icons.add),
-              label: const Text('Ajouter un rendez-vous'),
-              style: TextButton.styleFrom(foregroundColor: AppColors.primary),
+            if (!ferme) ...[
+              const SizedBox(height: 16),
+              TextButton.icon(
+                onPressed: onAjouter,
+                icon: const Icon(Icons.add),
+                label: const Text('Ajouter un rendez-vous'),
+                style: TextButton.styleFrom(foregroundColor: AppColors.primary),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Petite carte « journée libre » quand il ne reste que des RDV annulés
+class _CarteJourLibre extends StatelessWidget {
+  final bool ferme;
+  final VoidCallback onAjouter;
+
+  const _CarteJourLibre({required this.ferme, required this.onAjouter});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            ferme ? Icons.event_busy : Icons.event_available,
+            color: AppColors.primary,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              ferme
+                  ? 'Le salon est fermé ce jour-là.'
+                  : 'Aucun rendez-vous actif ce jour-là.',
+              style: const TextStyle(color: AppColors.onSurfaceVariant),
+            ),
+          ),
+          if (!ferme)
+            TextButton(onPressed: onAjouter, child: const Text('Ajouter')),
+        ],
+      ),
+    );
+  }
+}
+
+/// Ligne « 2 annulés » qui plie / déplie les rendez-vous annulés
+class _EnteteAnnules extends StatelessWidget {
+  final int nombre;
+  final bool ouvert;
+  final VoidCallback onTap;
+
+  const _EnteteAnnules({
+    required this.nombre,
+    required this.ouvert,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 8, 16, 14),
+        child: Row(
+          children: [
+            Text(
+              nombre > 1 ? '$nombre annulés' : '1 annulé',
+              style: const TextStyle(
+                color: AppColors.onSurfaceVariant,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Icon(
+              ouvert ? Icons.expand_less : Icons.expand_more,
+              size: 20,
+              color: AppColors.onSurfaceVariant,
             ),
           ],
         ),
