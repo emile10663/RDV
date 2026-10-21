@@ -45,11 +45,11 @@ Future<void> afficherLienReservation(BuildContext context, Salon salon) {
                 backgroundColor: Colors.white,
                 eyeStyle: const QrEyeStyle(
                   eyeShape: QrEyeShape.square,
-                  color: AppColors.secondary,
+                  color: AppColors.primary,
                 ),
                 dataModuleStyle: const QrDataModuleStyle(
                   dataModuleShape: QrDataModuleShape.square,
-                  color: AppColors.secondary,
+                  color: AppColors.primary,
                 ),
               ),
             ),

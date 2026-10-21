@@ -1,47 +1,49 @@
 import 'package:flutter/material.dart';
 
-/// 🎨 Palette "Fresh & Clean" – Blanc lumineux, Bleu marine, Corail + Dark Mode
+/// 🎨 Palette "Barber premium" : noir profond, or, fond crème.
+/// Les noms des couleurs sont ceux du projet actuel (primary, accent, secondary…),
+/// donc tous les écrans changent de couleur sans être modifiés.
 abstract final class AppColors {
-  // ─── Light Mode ───
-  static const Color primary = Color(0xFF1E3A8A);     // Bleu marine
+  // ─── Marque ───
+  static const Color primary = Color(0xFF111111); // noir profond (boutons, titres)
   static const Color onPrimary = Color(0xFFFFFFFF);
-  static const Color secondary = Color(0xFF0EA5E9);   // Bleu ciel
-  static const Color onSecondary = Color(0xFF0F172A);
-  static const Color accent = Color(0xFFF97316);      // Corail (accent principal)
-  static const Color gold = Color(0xFFFB923C);        // Orange doux
+  static const Color secondary = Color(0xFFF6EFD8); // or très pâle (pastilles, fonds d'icônes)
+  static const Color onSecondary = Color(0xFF111111);
+  static const Color accent = Color(0xFFD4AF37); // or (accent principal)
+  static const Color gold = Color(0xFFD4AF37);
 
-  // ─── Surfaces Light ───
-  static const Color surface = Color(0xFFF8FAFC);
+  // ─── Surfaces ───
+  static const Color surface = Color(0xFFF5F3EF); // fond crème
   static const Color card = Color(0xFFFFFFFF);
-  static const Color surfaceContainerHigh = Color(0xFFF1F5F9);
-  static const Color border = Color(0xFFE2E8F0);
+  static const Color surfaceContainerHigh = Color(0xFFEFECE6);
+  static const Color border = Color(0xFFE7E3DA);
 
-  // ─── Textes Light ───
-  static const Color onSurface = Color(0xFF0F172A);
-  static const Color onSurfaceVariant = Color(0xFF64748B);
+  // ─── Textes ───
+  static const Color onSurface = Color(0xFF161616);
+  static const Color onSurfaceVariant = Color(0xFF6B6760);
 
   // ─── Divers ───
-  static const Color outline = Color(0xFFCBD5E1);
-  static const Color error = Color(0xFFEF4444);
+  static const Color outline = Color(0xFFB5B0A6);
+  static const Color error = Color(0xFFBA1A1A);
 
-  // ─── Statuts ───
-  static const Color statutConfirme = Color(0xFF10B981);
-  static const Color statutEnAttente = Color(0xFFF97316);
-  static const Color statutAnnule = Color(0xFFEF4444);
-  static const Color statutTermine = Color(0xFF6B7280);
+  // ─── Statuts des rendez-vous ───
+  static const Color statutConfirme = Color(0xFF1E8E4E);
+  static const Color statutEnAttente = Color(0xFFC77700);
+  static const Color statutAnnule = Color(0xFFBA1A1A);
+  static const Color statutTermine = Color(0xFF76777D);
 
-  // ─── Dark Mode ───
-  static const Color darkPrimary = Color(0xFF0F172A);
-  static const Color darkSurface = Color(0xFF1E2937);
-  static const Color darkCard = Color(0xFF334155);
-  static const Color darkBorder = Color(0xFF475569);
-  static const Color darkOnSurface = Color(0xFFF1F5F9);
-  static const Color darkOnSurfaceVariant = Color(0xFFCBD5E1);
+  // ─── Mode sombre (pas activé pour l'instant) ───
+  static const Color darkPrimary = Color(0xFF000000);
+  static const Color darkSurface = Color(0xFF141414);
+  static const Color darkCard = Color(0xFF222222);
+  static const Color darkBorder = Color(0xFF3A3A3A);
+  static const Color darkOnSurface = Color(0xFFF5F3EF);
+  static const Color darkOnSurfaceVariant = Color(0xFFB5B0A6);
 
-  // ─── Dégradé en-têtes ───
+  // ─── Dégradé sombre des en-têtes ───
   static const LinearGradient enTete = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF1E40AF), Color(0xFF1E3A8A)],
+    colors: [Color(0xFF2A2A2A), Color(0xFF000000)],
   );
 }

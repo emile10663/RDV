@@ -54,8 +54,13 @@ class PuceJour extends StatelessWidget {
             width: aujourdhui && !selected ? 1.8 : 1,
           ),
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+        // FittedBox : si le contenu est trop grand pour la pastille, il rétrécit
+        // légèrement au lieu de déborder (« BOTTOM OVERFLOWED »)
+        child: Center(
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Text(
               jourSemaine,
@@ -65,7 +70,7 @@ class PuceJour extends StatelessWidget {
                 fontWeight: aujourdhui ? FontWeight.w700 : FontWeight.w400,
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 3),
             Text(
               '${jour.day}',
               style: TextStyle(
@@ -74,9 +79,12 @@ class PuceJour extends StatelessWidget {
                 color: texte,
               ),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 4),
             if (ferme && !pastille)
-              Text('fermé', style: TextStyle(fontSize: 9, color: discret))
+              Text(
+                'fermé',
+                style: TextStyle(fontSize: 9, height: 1, color: discret),
+              )
             else
               Container(
                 width: 6,
@@ -89,6 +97,8 @@ class PuceJour extends StatelessWidget {
                 ),
               ),
           ],
+            ),
+          ),
         ),
       ),
       ),

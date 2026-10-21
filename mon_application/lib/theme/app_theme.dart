@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'app_colors.dart';
 
-/// 🖌️ Thème global : Fresh & Clean + Dark Mode complet
+/// 🖌️ Thème global : noir et or (Barber premium)
 abstract final class AppTheme {
   static ThemeData get light => _buildTheme(isDark: false);
   static ThemeData get dark => _buildTheme(isDark: true);
@@ -67,7 +67,7 @@ abstract final class AppTheme {
 
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.accent,
+          backgroundColor: AppColors.primary,
           foregroundColor: Colors.white,
           minimumSize: const Size.fromHeight(54),
           shape: boutonForme,
@@ -100,7 +100,7 @@ abstract final class AppTheme {
 
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: isDark ? AppColors.darkCard : AppColors.card,
-        indicatorColor: AppColors.accent.withOpacity(0.25),
+        indicatorColor: AppColors.accent.withValues(alpha: 0.25),
         elevation: 0,
         height: 70,
       ),
