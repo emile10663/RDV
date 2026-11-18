@@ -1,294 +1,191 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
-
 import '../models/rendez_vous.dart';
 import '../screens/planning/rdv_detail_screen.dart';
-import '../theme/app_colors.dart';
-import 'statut_rdv_style.dart';
-import '../utils/prix.dart';
 
-/// 🗓️ Carte d'un rendez-vous : bandeau de couleur = statut
+/// 🗓️ Carte affichant un rendez-vous (réutilisable partout)
 class CardRdv extends StatelessWidget {
   final RendezVous rdv;
-  final VoidCallback? onConfirme;
   final VoidCallback? onAnnule;
   final VoidCallback? onTermine;
 
   const CardRdv({
     super.key,
     required this.rdv,
-    this.onConfirme,
     this.onAnnule,
     this.onTermine,
   });
 
-  bool get _modifiable =>
-      rdv.statut != StatutRdv.termine && rdv.statut != StatutRdv.annule;
+  /// Renvoie la couleur du statut (rond + texte)
+  Color _couleurStatut(StatutRdv statut) {
+    switch (statut) {
+      case StatutRdv.confirme:
+        return Colors.green;
+      case StatutRdv.enAttente:
+        return Colors.orange;
+      case StatutRdv.annule:
+        return Colors.red;
+      case StatutRdv.termine:
+        return Colors.grey;
+    }
+  }
 
-  /// Boutons directement sur la carte : confirmer / refuser une demande,
-  /// ou marquer terminé un RDV confirmé dont l'heure est passée
-  bool get _actionsRapides =>
-      (rdv.statut == StatutRdv.enAttente &&
-          (onConfirme != null || onAnnule != null)) ||
-      (rdv.statut == StatutRdv.confirme &&
-          onTermine != null &&
-          rdv.fin.isBefore(DateTime.now()));
+  /// Renvoie le texte du statut
+  String _texteStatut(StatutRdv statut) {
+    switch (statut) {
+      case StatutRdv.confirme:
+        return 'Confirmé';
+      case StatutRdv.enAttente:
+        return 'En attente';
+      case StatutRdv.annule:
+        return 'Annulé';
+      case StatutRdv.termine:
+        return 'Terminé';
+    }
+  }
 
-  Future<void> _confirmerAnnulation(BuildContext context) async {
-    final confirme = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Annuler ce rendez-vous ?'),
-        content: Text('${rdv.client.nomComplet} — ${rdv.dateFormatee}'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Non'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text(
-              'Oui, annuler',
-              style: TextStyle(color: AppColors.error),
-            ),
-          ),
-        ],
-      ),
-    );
-    if (confirme == true) onAnnule?.call();
+  /// Renvoie la couleur de FOND de la carte (très pâle)
+  Color _fondStatut(StatutRdv statut) {
+    switch (statut) {
+      case StatutRdv.confirme:
+        return Colors.green.withValues(alpha: 0.08);
+      case StatutRdv.enAttente:
+        return Colors.orange.withValues(alpha: 0.08);
+      case StatutRdv.annule:
+        return Colors.red.withValues(alpha: 0.08);
+      case StatutRdv.termine:
+        return Colors.grey.withValues(alpha: 0.08);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    final couleur = rdv.statut.couleur;
-    final annule = rdv.statut == StatutRdv.annule;
-    final heureFin = DateFormat('HH:mm').format(rdv.fin);
-    final prix = formatPrix(rdv.prestation.prix);
 
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
+    return InkWell(
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => RdvDetailScreen(rdv: rdv),
           ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(20),
-          child: InkWell(
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => RdvDetailScreen(rdv: rdv),
+        );
+      },
+      child: Card(
+        color: _fondStatut(rdv.statut),
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              // ─── Bloc HEURE à gauche ───
+              Container(
+                width: 64,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: colors.primary,
+                  borderRadius: BorderRadius.circular(12),
                 ),
-              );
-            },
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-            IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // ─── Bandeau de statut ───
-                  Container(width: 6, color: couleur),
-
-                  // ─── Heure ───
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 0, 16),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          rdv.heureFormatee,
-                          style: textTheme.titleLarge!.copyWith(fontSize: 19),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          heureFin,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: AppColors.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 14,
-                    ),
-                    child: Container(width: 1, color: AppColors.border),
-                  ),
-
-                  // ─── Client + prestation + statut ───
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            rdv.client.nomComplet,
-                            overflow: TextOverflow.ellipsis,
-                            style: textTheme.titleMedium!.copyWith(
-                              fontWeight: FontWeight.w700,
-                              color: annule
-                                  ? AppColors.onSurfaceVariant
-                                  : AppColors.onSurface,
-                              decoration: annule
-                                  ? TextDecoration.lineThrough
-                                  : null,
-                            ),
-                          ),
-                          const SizedBox(height: 3),
-                          Text(
-                            '${rdv.prestation.nom} · ${rdv.prestation.duree.inMinutes} min',
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              color: AppColors.onSurfaceVariant,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: couleur.withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(
-                              rdv.statut.libelle,
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: couleur,
-                              ),
-                            ),
-                          ),
-                        ],
+                child: Column(
+                  children: [
+                    Text(
+                      '${rdv.dateHeure.hour.toString().padLeft(2, '0')}:${rdv.dateHeure.minute.toString().padLeft(2, '0')}',
+                      style: textTheme.titleMedium!.copyWith(
+                        color: colors.onPrimary,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
-                  ),
-
-                  // ─── Prix + menu ───
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(8, 14, 4, 6),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.only(right: 8, top: 2),
-                          child: Text(
-                            prix,
-                            style: textTheme.titleMedium!.copyWith(
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.primary,
-                            ),
-                          ),
-                        ),
-                        if (_modifiable)
-                          PopupMenuButton<String>(
-                            icon: const Icon(
-                              Icons.more_horiz,
-                              color: AppColors.onSurfaceVariant,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            onSelected: (valeur) {
-                              if (valeur == 'annuler') {
-                                _confirmerAnnulation(context);
-                              }
-                              if (valeur == 'confirmer') onConfirme?.call();
-                              if (valeur == 'terminer') onTermine?.call();
-                            },
-                            itemBuilder: (context) => [
-                              if (rdv.statut == StatutRdv.enAttente)
-                                const PopupMenuItem(
-                                  value: 'confirmer',
-                                  child: Text('Confirmer le RDV'),
-                                ),
-                              if (rdv.statut == StatutRdv.confirme)
-                                const PopupMenuItem(
-                                  value: 'terminer',
-                                  child: Text('Marquer terminé'),
-                                ),
-                              PopupMenuItem(
-                                value: 'annuler',
-                                child: Text(
-                                  rdv.statut == StatutRdv.enAttente
-                                      ? 'Refuser'
-                                      : 'Annuler le RDV',
-                                ),
-                              ),
-                            ],
-                          )
-                        else
-                          const SizedBox(height: 48),
-                      ],
+                    Text(
+                      '${rdv.dateHeure.day}/${rdv.dateHeure.month}',
+                      style: textTheme.bodySmall!.copyWith(
+                        color: colors.onPrimary.withValues(alpha: 0.8),
+                      ),
                     ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(width: 16),
+
+              // ─── Infos au centre ───
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      rdv.client.nomComplet,
+                      style: textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      rdv.prestation.nom,
+                      style: textTheme.bodyMedium!.copyWith(
+                        color: colors.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // ─── PRIX + STATUT à droite ───
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    '${rdv.prestation.prix.toStringAsFixed(2)} €',
+                    style: textTheme.titleMedium!.copyWith(
+                      color: colors.secondary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 10,
+                        height: 10,
+                        decoration: BoxDecoration(
+                          color: _couleurStatut(rdv.statut),
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        _texteStatut(rdv.statut),
+                        style: TextStyle(
+                          color: _couleurStatut(rdv.statut),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
-            ),
-            if (_actionsRapides)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
-                child: rdv.statut == StatutRdv.enAttente
-                    ? Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton(
-                              onPressed: () => _confirmerAnnulation(context),
-                              style: OutlinedButton.styleFrom(
-                                minimumSize: const Size(0, 40),
-                                foregroundColor: AppColors.error,
-                                side: const BorderSide(
-                                  color: AppColors.border,
-                                ),
-                              ),
-                              child: const Text('Refuser'),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: ElevatedButton(
-                              onPressed: onConfirme,
-                              style: ElevatedButton.styleFrom(
-                                minimumSize: const Size(0, 40),
-                              ),
-                              child: const Text('Confirmer'),
-                            ),
-                          ),
-                        ],
-                      )
-                    : ElevatedButton.icon(
-                        onPressed: onTermine,
-                        style: ElevatedButton.styleFrom(
-                          minimumSize: const Size(double.infinity, 40),
-                        ),
-                        icon: const Icon(Icons.check, size: 18),
-                        label: const Text('Marquer terminé'),
-                      ),
+
+
+                            
+                           // ─── Menu ⋯ tout à droite ───
+              PopupMenuButton<String>(
+                onSelected: (valeur) {
+                  if (valeur == 'annuler') onAnnule?.call();
+                  if (valeur == 'terminer') onTermine?.call();
+                },
+                itemBuilder: (context) => [
+                  // 👇 ICI : cette ligne conditionnelle
+                  if (rdv.statut != StatutRdv.termine &&
+                      rdv.statut != StatutRdv.annule)
+                    const PopupMenuItem(
+                      value: 'terminer',
+                      child: Text('Marquer terminé'),
+                    ),
+                  const PopupMenuItem(
+                    value: 'annuler',
+                    child: Text('Annuler le RDV'),
+                  ),
+                ],
               ),
-          ],
-        ),
+            ],
           ),
         ),
       ),

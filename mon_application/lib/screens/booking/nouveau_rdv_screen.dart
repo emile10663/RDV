@@ -1,552 +1,154 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import '../../data/mock_rdvs.dart';
 import '../../models/client.dart';
-import '../../models/horaires_salon.dart';
 import '../../models/prestation.dart';
 import '../../models/rendez_vous.dart';
-import '../../theme/app_colors.dart';
-import '../../utils/prix.dart';
-import '../../widgets/puce_jour.dart';
 
 /// ➕ Écran de création d'un rendez-vous
 class NouveauRdvScreen extends StatefulWidget {
-  /// Prestations proposées par le salon
-  final List<Prestation> prestations;
-
-  /// RDV déjà pris : sert à griser les créneaux occupés
-  final List<RendezVous> rdvsExistants;
-
-  /// Jour présélectionné (celui affiché dans le planning)
-  final DateTime? jourInitial;
-
-  /// Vrai quand c'est un client qui réserve (téléphone obligatoire, textes adaptés)
-  final bool modeClient;
-
-  /// Horaires et congés du salon : seuls les jours ouverts ont des créneaux
-  final HorairesSalon horaires;
-
-  const NouveauRdvScreen({
-    super.key,
-    required this.prestations,
-    this.rdvsExistants = const [],
-    this.jourInitial,
-    this.modeClient = false,
-    this.horaires = HorairesSalon.parDefaut,
-  });
+  const NouveauRdvScreen({super.key});
 
   @override
   State<NouveauRdvScreen> createState() => _NouveauRdvScreenState();
 }
 
 class _NouveauRdvScreenState extends State<NouveauRdvScreen> {
-  static const _nbJours = 45;
-
-  final _formKey = GlobalKey<FormState>();
-  final _prenomController = TextEditingController();
+  // 🧠 CERVEAU : tout ce qui change vit ici
   final _nomController = TextEditingController();
   final _telController = TextEditingController();
+  Prestation? _prestationChoisie;   // nullable = rien choisi au départ
+  DateTime? _dateChoisie;
+  TimeOfDay? _heureChoisie;
 
-  late final DateTime _aujourdhui;
-  late DateTime _jour;
-  late final ScrollController _bandeau;
-  Prestation? _prestation;
-  TimeOfDay? _heure;
-
-  @override
-  void initState() {
-    super.initState();
-    final now = DateTime.now();
-    _aujourdhui = DateTime(now.year, now.month, now.day);
-    final init = widget.jourInitial;
-    _jour = (init == null || init.isBefore(_aujourdhui))
-        ? _aujourdhui
-        : DateTime(init.year, init.month, init.day);
-    final index = DateTime.utc(_jour.year, _jour.month, _jour.day)
-        .difference(
-          DateTime.utc(_aujourdhui.year, _aujourdhui.month, _aujourdhui.day),
-        )
-        .inDays;
-    _bandeau = ScrollController(
-      initialScrollOffset: math.max(
-        0,
-        index * (PuceJour.largeur + PuceJour.espace),
-      ),
+  // 📅 Sélecteur de date fourni par Flutter
+  Future<void> _choisirDate() async {
+    final maintenant = DateTime.now();
+    final date = await showDatePicker(
+      context: context,
+      initialDate: maintenant,
+      firstDate: maintenant,                          // pas de RDV dans le passé
+      lastDate: maintenant.add(const Duration(days: 365)),
     );
+    if (date != null) {
+      setState(() => _dateChoisie = date);  // setState = "redessine l'écran !"
+    }
   }
 
-  String? _obligatoire(String? valeur) =>
-      (valeur == null || valeur.trim().isEmpty) ? 'Champ obligatoire' : null;
-
-  void _message(String texte) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(texte)));
-  }
-
-  /// Tous les créneaux du jour choisi (toutes les 30 min, selon les horaires)
-  List<TimeOfDay> get _creneaux {
-    final plage = widget.horaires.plageDuJour(_jour);
-    if (plage == null) return [];
-    return [
-      for (var m = plage.ouverture; m < plage.fermeture; m += 30)
-        TimeOfDay(hour: m ~/ 60, minute: m % 60),
-    ];
-  }
-
-  DateTime _debut(TimeOfDay t) =>
-      DateTime(_jour.year, _jour.month, _jour.day, t.hour, t.minute);
-
-  /// Un créneau est libre s'il n'est pas passé, tient avant la fermeture
-  /// et ne chevauche aucun RDV non annulé
-  bool _libre(TimeOfDay t) {
-    final debut = _debut(t);
-    if (debut.isBefore(DateTime.now())) return false;
-
-    final plage = widget.horaires.plageDuJour(_jour);
-    if (plage == null) return false;
-
-    final duree = _prestation?.duree ?? const Duration(minutes: 30);
-    final fin = debut.add(duree);
-    final fermeture = DateTime(
-      _jour.year,
-      _jour.month,
-      _jour.day,
-      0,
-      plage.fermeture,
+  // 🕐 Sélecteur d'heure
+  Future<void> _choisirHeure() async {
+    final heure = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.now(),
     );
-    if (fin.isAfter(fermeture)) return false;
-
-    return !widget.rdvsExistants
-        .where((r) => r.statut != StatutRdv.annule)
-        .any((r) => debut.isBefore(r.fin) && fin.isAfter(r.dateHeure));
+    if (heure != null) {
+      setState(() => _heureChoisie = heure);
+    }
   }
 
-  /// Si le créneau choisi n'est plus possible (autre jour/prestation), on l'efface
-  void _verifierHeure() {
-    if (_heure != null && !_libre(_heure!)) _heure = null;
-  }
-
-  String _heureTexte(TimeOfDay h) =>
-      '${h.hour.toString().padLeft(2, '0')}:${h.minute.toString().padLeft(2, '0')}';
-
+  // ✅ Validation : crée le RDV et retourne au planning
   void _valider() {
-    if (!_formKey.currentState!.validate()) return;
-    if (_prestation == null) {
-      _message('Choisis une prestation');
-      return;
-    }
-    if (_heure == null) {
-      _message('Choisis une heure');
-      return;
-    }
-
-    final debut = _debut(_heure!);
-    if (debut.isBefore(DateTime.now())) {
-      _message('Ce créneau est déjà passé');
+    if (_prestationChoisie == null || _dateChoisie == null || _heureChoisie == null) {
+      // SnackBar = petite bannière d'erreur en bas d'écran
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Prestation, date et heure sont obligatoires')),
+      );
       return;
     }
 
     final rdv = RendezVous(
-      id: RendezVous.nouvelId(),
+      id: 'r${mockRdvs.length + 1}',
       client: Client(
-        id: 'c${RendezVous.nouvelId()}',
-        nom: _nomController.text.trim(),
-        prenom: _prenomController.text.trim(),
-        telephone: _telController.text.trim(),
+        id: 'c${mockRdvs.length + 1}',
+        nom: _nomController.text,
+        prenom: '',
+        telephone: _telController.text,
         email: '',
       ),
-      prestation: _prestation!,
-      dateHeure: debut,
+      prestation: _prestationChoisie!,
+      dateHeure: DateTime(
+        _dateChoisie!.year, _dateChoisie!.month, _dateChoisie!.day,
+        _heureChoisie!.hour, _heureChoisie!.minute,
+      ),
     );
 
-    final conflit = widget.rdvsExistants
-        .where((r) => r.statut != StatutRdv.annule)
-        .any((r) => r.chevauche(rdv));
-    if (conflit) {
-      _message('Ce créneau chevauche un autre rendez-vous');
-      return;
-    }
-
-    Navigator.of(context).pop(rdv);
+     Navigator.of(context).pop(rdv);
   }
 
   @override
   Widget build(BuildContext context) {
-    final prestation = _prestation;
-    final heure = _heure;
-
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.modeClient ? 'Réserver' : 'Nouveau rendez-vous'),
-      ),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-          children: [
-            // ─── 1. Client ───
-            const _Titre('Client', numero: 1),
-            Row(
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    controller: _prenomController,
-                    textCapitalization: TextCapitalization.words,
-                    decoration: const InputDecoration(labelText: 'Prénom'),
-                    validator: _obligatoire,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TextFormField(
-                    controller: _nomController,
-                    textCapitalization: TextCapitalization.words,
-                    decoration: const InputDecoration(labelText: 'Nom'),
-                    validator: _obligatoire,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _telController,
-              keyboardType: TextInputType.phone,
-              decoration: InputDecoration(
-                labelText: widget.modeClient
-                    ? 'Téléphone'
-                    : 'Téléphone (facultatif)',
-                prefixIcon: const Icon(Icons.phone_outlined),
-              ),
-              validator: widget.modeClient ? _obligatoire : null,
-            ),
-
-            // ─── 2. Prestation ───
-            const _Titre('Prestation', numero: 2),
-            for (final p in widget.prestations)
-              _TuilePrestation(
-                prestation: p,
-                selected: prestation?.id == p.id,
-                onTap: () => setState(() {
-                  _prestation = p;
-                  _verifierHeure();
-                }),
-              ),
-
-            // ─── 3. Jour ───
-            const _Titre('Jour', numero: 3),
-            SizedBox(
-              height: 82,
-              child: ListView.builder(
-                controller: _bandeau,
-                scrollDirection: Axis.horizontal,
-                itemCount: _nbJours,
-                itemBuilder: (context, i) {
-                  final jour = DateTime(
-                    _aujourdhui.year,
-                    _aujourdhui.month,
-                    _aujourdhui.day + i,
-                  );
-                  return PuceJour(
-                    jour: jour,
-                    selected: jour == _jour,
-                    ferme: !widget.horaires.estOuvert(jour),
-                    onTap: () => setState(() {
-                      _jour = jour;
-                      _verifierHeure();
-                    }),
-                  );
-                },
-              ),
-            ),
-
-            // ─── 4. Heure ───
-            const _Titre('Heure', numero: 4),
-            if (!widget.horaires.estOuvert(_jour))
-              const Padding(
-                padding: EdgeInsets.only(bottom: 10),
-                child: Text(
-                  'Le salon est fermé ce jour-là. Choisis un autre jour.',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: AppColors.onSurfaceVariant,
-                  ),
-                ),
-              )
-            else if (prestation == null)
-              const Padding(
-                padding: EdgeInsets.only(bottom: 10),
-                child: Text(
-                  'Choisis une prestation pour voir les créneaux disponibles.',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: AppColors.onSurfaceVariant,
-                  ),
-                ),
-              ),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (final t in _creneaux)
-                  _PuceHeure(
-                    texte: _heureTexte(t),
-                    selected: heure == t,
-                    libre: _libre(t),
-                    onTap: () => setState(() => _heure = t),
-                  ),
-              ],
-            ),
-          ],
-        ),
-      ),
-
-      // ─── Barre du bas : récapitulatif + bouton ───
-      bottomNavigationBar: Container(
-        decoration: const BoxDecoration(
-          color: AppColors.card,
-          border: Border(top: BorderSide(color: AppColors.border)),
-        ),
-        child: SafeArea(
-          top: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (prestation != null && heure != null)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: Text(
-                      '${DateFormat('EEEE d MMMM', 'fr_FR').format(_jour)} à ${_heureTexte(heure)}'
-                      ' · ${formatPrix(prestation.prix)}',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                  ),
-                ElevatedButton(
-                  onPressed: _valider,
-                  child: Text(
-                    widget.modeClient
-                        ? 'Envoyer ma demande'
-                        : 'Confirmer le rendez-vous',
-                  ),
-                ),
-              ],
+      appBar: AppBar(title: const Text('Nouveau rendez-vous')),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          // ─── Champs texte ───
+          TextField(
+            controller: _nomController,
+            decoration: const InputDecoration(
+              labelText: 'Nom du client',
+              hintText: 'Ex : Sophie Martin',
             ),
           ),
-        ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _telController,
+            keyboardType: TextInputType.phone,   // clavier téléphone
+            decoration: const InputDecoration(labelText: 'Téléphone'),
+          ),
+          const SizedBox(height: 16),
+
+          // ─── Liste déroulante des prestations ───
+          DropdownButtonFormField<Prestation>(
+            initialValue: _prestationChoisie,
+            decoration: const InputDecoration(labelText: 'Prestation'),
+            items: mockPrestations.map((p) {
+              return DropdownMenuItem(value: p, child: Text('${p.nom} — ${p.prix} €'));
+            }).toList(),
+            onChanged: (p) => setState(() => _prestationChoisie = p),
+          ),
+          const SizedBox(height: 16),
+
+          // ─── Date + heure sur la même ligne ───
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _choisirDate,
+                  icon: const Icon(Icons.calendar_today),
+                  // Affiche la date choisie, ou "Date" si rien
+                  label: Text(_dateChoisie == null
+                      ? 'Date'
+                      : '${_dateChoisie!.day}/${_dateChoisie!.month}/${_dateChoisie!.year}'),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _choisirHeure,
+                  icon: const Icon(Icons.schedule),
+                  label: Text(_heureChoisie == null
+                      ? 'Heure'
+                      : '${_heureChoisie!.hour.toString().padLeft(2, '0')}:${_heureChoisie!.minute.toString().padLeft(2, '0')}'),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 32),
+
+          // ─── Bouton valider (pleine largeur, déjà stylé par ton thème) ───
+          ElevatedButton(
+            onPressed: _valider,
+            child: const Text('Valider le rendez-vous'),
+          ),
+        ],
       ),
     );
   }
 
   @override
   void dispose() {
-    _prenomController.dispose();
     _nomController.dispose();
     _telController.dispose();
-    _bandeau.dispose();
     super.dispose();
-  }
-}
-
-/// Titre de section numéroté
-class _Titre extends StatelessWidget {
-  final String texte;
-  final int numero;
-
-  const _Titre(this.texte, {required this.numero});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 24, bottom: 12),
-      child: Row(
-        children: [
-          Container(
-            width: 24,
-            height: 24,
-            alignment: Alignment.center,
-            decoration: const BoxDecoration(
-              color: AppColors.primary,
-              shape: BoxShape.circle,
-            ),
-            child: Text(
-              '$numero',
-              style: const TextStyle(
-                color: AppColors.accent,
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Text(texte, style: Theme.of(context).textTheme.titleMedium),
-        ],
-      ),
-    );
-  }
-}
-
-/// Carte cliquable d'une prestation
-class _TuilePrestation extends StatelessWidget {
-  final Prestation prestation;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _TuilePrestation({
-    required this.prestation,
-    required this.selected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final prix = formatPrix(prestation.prix);
-
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: selected ? AppColors.secondary : AppColors.card,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: selected ? AppColors.primary : AppColors.border,
-            width: selected ? 1.5 : 1,
-          ),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    prestation.nom,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 15,
-                    ),
-                  ),
-                  if (prestation.description.isNotEmpty) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      prestation.description,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: AppColors.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.schedule,
-                        size: 14,
-                        color: AppColors.onSurfaceVariant,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${prestation.duree.inMinutes} min',
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: AppColors.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  prix,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 16,
-                    color: AppColors.primary,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Icon(
-                  selected ? Icons.check_circle : Icons.circle_outlined,
-                  color: selected ? AppColors.primary : AppColors.outline,
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Une heure cliquable ("09:30"), grisée si indisponible
-class _PuceHeure extends StatelessWidget {
-  final String texte;
-  final bool selected;
-  final bool libre;
-  final VoidCallback onTap;
-
-  const _PuceHeure({
-    required this.texte,
-    required this.selected,
-    required this.libre,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final Color fond;
-    final Color bord;
-    final Color couleurTexte;
-
-    if (selected) {
-      fond = AppColors.primary;
-      bord = AppColors.primary;
-      couleurTexte = Colors.white;
-    } else if (libre) {
-      fond = AppColors.card;
-      bord = AppColors.border;
-      couleurTexte = AppColors.onSurface;
-    } else {
-      fond = AppColors.surfaceContainerHigh;
-      bord = AppColors.surfaceContainerHigh;
-      couleurTexte = AppColors.outline;
-    }
-
-    return GestureDetector(
-      onTap: libre ? onTap : null,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        width: 72,
-        padding: const EdgeInsets.symmetric(vertical: 11),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: fond,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: bord),
-        ),
-        child: Text(
-          texte,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: couleurTexte,
-            decoration: libre ? null : TextDecoration.lineThrough,
-          ),
-        ),
-      ),
-    );
   }
 }

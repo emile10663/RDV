@@ -1,26 +1,17 @@
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:mon_application/models/client.dart';
+import 'package:mon_application/models/prestation.dart';
+import 'package:mon_application/models/rendez_vous.dart';
+import 'package:mon_application/widgets/card_rdv.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'package:mon_application/services/notification_service.dart';
-
-import 'firebase_options.dart';
-import 'screens/accueil_screen.dart';
-import 'screens/client/client_home_screen.dart';
 import 'theme/app_theme.dart';
+import 'screens/main_screen.dart';
 
-Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await initializeDateFormatting('fr_FR', null);
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized(); 
 
-  // Démarre la connexion à Firebase avant d'afficher l'appli
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-
-  // ← Ajoute ces lignes
-  final notificationService = NotificationService();
-  await notificationService.init();
-
+   await initializeDateFormatting('fr_FR', null);
+   
   runApp(const MonCoiffeurApp());
 }
 
@@ -29,17 +20,41 @@ class MonCoiffeurApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Lien de réservation : https://.../?salon=IDENTIFIANT
-    final salonId = Uri.base.queryParameters['salon'];
-    final viensDUnLien = salonId != null && salonId.isNotEmpty;
-
     return MaterialApp(
       title: 'Mon Coiffeur',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.light,
-      home: viensDUnLien
-          ? ClientHomeScreen(salonIdInitial: salonId)
-          : const AccueilScreen(), // sinon on choisit : client ou coiffeur
+      debugShowCheckedModeBanner: false,   // enlève la bannière "DEBUG"
+      theme: AppTheme.light,               // 👈 notre thème premium !
+      home: const MainScreen(),
+    );
+  }
+}
+
+// Écran temporaire pour tester le thème (on le remplacera bientôt)
+class HomeScreen extends StatelessWidget {
+  const HomeScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Mon Coiffeur')),
+      body: ListView(          // ListView = liste déroulante verticale
+   children: [
+    CardRdv(
+      rdv: RendezVous(
+        id: 'rdv-1',
+        client: const Client(
+          id: 'c1', nom: 'Martin', prenom: 'Sophie',
+          telephone: '0612345678', email: 'sophie@mail.fr',
+        ),
+        prestation: const Prestation(
+          id: 'p1', nom: 'Coupe + Brushing', description: '',
+          duree: Duration(minutes: 60), prix: 45.0,
+        ), dateHeure: DateTime(DateTime.august),
+          // ❌ volontaire ! Corrige ça :
+      ),
+    ),
+  ],
+),
     );
   }
 }
